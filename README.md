@@ -4,7 +4,7 @@
 **Bernd Lauert**
 ----------------
 A matrix chatbot, designed for the [*StuStaNet
-e.V.*](http://http://vereinsanzeiger.stustanet.de/) administrator chatroom
+e.V.*](http://vereinsanzeiger.stustanet.de/) administrator chatroom
 (#admins:stusta.de), written in python.
 
 **Requirements**:
