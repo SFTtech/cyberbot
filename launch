@@ -1,0 +1,2 @@
+#!/bin/bash
+/usr/bin/env -i python3 bernd -c ./config.ini
