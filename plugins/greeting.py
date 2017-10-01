@@ -19,7 +19,9 @@ def register_to(bot):
         room.send_text(greeting + ' ' + event['sender'] + '. ' + jabbering)
 
     # Add a regex handler waiting for the word Hi
-    hi_handler = MRegexHandler("([sS]er(v[ua])?s)|" +
-                               "(([oO]?)((bend)|([hH](ey|i|ai|ello|allo))))",
-                               hi_callback)
+    hi_handler = MRegexHandler("(\s+|^)(([sS]er(v[ua])?s)|" +
+                               "(([oO]?)" +
+                               "((bend)|([hH](ey(ho)?|i|ai|ello|allo)))))" +
+                               "(\s+|$)",
+                                hi_callback)
     bot.add_handler(hi_handler)
