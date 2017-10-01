@@ -44,6 +44,11 @@ def register_to(bot):
     def activate_callback(room, event):
         global statuswatch_running
 
+        # ignore, if this feature is requested in a private room
+        if (event['room_id'] not in TRUSTED_ROOMS):
+            room.send_text("This feature is not available in this room")
+            return
+
         if (not statuswatch_running):
             t = threading.Thread(target=start_poll, args=(room,event))
             t.start()

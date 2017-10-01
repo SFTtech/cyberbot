@@ -16,10 +16,10 @@ folder for correct execution.
 **Execution**:
 
 Specify the login credentials for the bot, as well as target rooms to join, in
-the provided *config.ini* file. When specifying target rooms, both room aliases
-(`#alias:server.org`) and internal IDs (`!suchalongidwehavehere:server.org`) are
-possible. If specifying multiple rooms, the IDs need to be separated by a
-semicolon (';'). Quotes should be generally omitted in the file.
+the provided *config.ini* file. When specifying target rooms, the internal
+ID (`!suchalongidwehavehere:server.org`) must be used in order enable
+room-specific plugins. If specifying multiple rooms, the IDs need to be
+separated by a semicolon (';'). Quotes should be generally omitted in the file.
 
 After the bot has been configured, issue:
 

@@ -17,6 +17,12 @@ def register_to(bot):
 
     def digital_callback(room, event):
 
+        # ignore, if this feature is requested in a private room
+        if (event['room_id'] not in TRUSTED_ROOMS):
+            room.send_text("This feature is not available in this room")
+            return
+
+        # save and update the counterstate in a 'digital_counter' file
         try:
             with open('digital_counter', 'r+') as f:
                 n = int(f.read(1024))

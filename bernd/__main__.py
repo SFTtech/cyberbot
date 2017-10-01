@@ -25,11 +25,17 @@ def main():
     print("Bernd steht langsam auf...")
 
     # Create an instance of the MatrixBotAPI
-    # The room argument is provided with empty list, as the original bot API
-    # doesn't support string arguments but room objects, which we can't create
-    # without an existing bot object. We add our room later. This argument also
-    # prevents the bot from accepting random room invites.
-    bot = MatrixBotAPI(username, password, server, [])
+
+    # The room argument can be provided with empty list or None, as the original
+    # bot API doesn't support string arguments but only room objects, which we
+    # can't create without an existing bot object. Trusted rooms from the config
+    # file can be joined later.
+
+    # Providing empty list also prevents the bot from accepting incoming room
+    # invites. Providing None causes the bot to accept invites. In this case,
+    # a plugin developer may choose to restrict the plugin capabilities to the
+    # trusted rooms, defined in the config.
+    bot = MatrixBotAPI(username, password, server, None)
 
     # With an established connection and existing bot object, we tell the bot
     # manually to join or specified rooms
@@ -55,6 +61,9 @@ def main():
 
             module = loader.load_module(modname)
             help_desc.append(module.HELP_DESC)  # collect plugin help texts
+
+            # Provide every module with a set of relevant environment vars
+            module.TRUSTED_ROOMS = rooms    # Trusted rooms to join
 
             # skip help module, collect all help texts before registering
             if (modname == 'plugins.help'):
