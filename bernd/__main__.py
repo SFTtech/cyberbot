@@ -109,6 +109,15 @@ def main():
 
     print("Bernd Lauert nun.")
 
+    # Retrieve a list of joined rooms and leave all rooms, we're in alone
+    cur_rooms = bot.client.get_rooms()
+    for r in rooms:
+        ppl = cur_rooms[r].get_joined_members()
+
+        if (len(ppl) == 1): # we're alone in this room
+            print("Detected a solitary room ({}), leaving...".format(r))
+            r.leave()
+
     if (exec_mode == "cmd"):
         # Infinitely read stdin to stall main thread
         while True:
