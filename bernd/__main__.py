@@ -2,6 +2,12 @@ import argparse
 import configparser
 import importlib
 
+# In order to provide the 'daemon' execution mode, matrix_bot_api and
+# matrix_client modules are modified to return a thread object from the
+# start_polling function. This import therefore needs to respect this
+# dependency (e.g. symlinks to the modified repos in the current folder).
+# If the module APIs are enhanced in the future, this can be
+# ignored.
 from matrix_bot_api.matrix_bot_api import MatrixBotAPI
 from pathlib import Path
 
@@ -9,13 +15,20 @@ def main():
 
     # Interpret command line arguments
     cmd = argparse.ArgumentParser()
-    cmd.add_argument("-c", "--config", default="/etc/prism/config.py")
+    cmd.add_argument("-c", "--config", default="/etc/prism/config.py",
+                     help="path to the configuration file")
+    cmd.add_argument("-m", "--mode", default="cmd",
+                     help="mode of operation [\'cmd\' or \'daemon\'].")
     args = cmd.parse_args()
+
+    # Interpret the execution mode
+    exec_mode = args.mode
 
     # Read the configuration file
     config = configparser.ConfigParser()
     config.sections()
     config.read(args.config)
+
 
     username = config['BotMatrixId']['USERNAME']
     password = config['BotMatrixId']['PASSWORD']
@@ -91,20 +104,30 @@ def main():
     help_module.register_to(bot)
     print("  [+] {} loaded".format(help_modname))
 
-    # Start polling
-    bot.start_polling()
+    # Start polling and save a handle to the child thread
+    child_thread = bot.start_polling()
 
     print("Bernd Lauert nun.")
 
-    # Infinitely read stdin to stall main thread while bot runs in other threads
-    while True:
-        try:
-            w = input("press q+<enter> or ctrl+d to quit\n")
-            if (w == 'q'):
+    if (exec_mode == "cmd"):
+        # Infinitely read stdin to stall main thread
+        while True:
+            try:
+                w = input("press q+<enter> or ctrl+d to quit\n")
+                if (w == 'q'):
+                    return 0
+            except EOFError:
                 return 0
-        except EOFError:
-            return 0
 
+    elif (exec_mode == "daemon"):
+        # Wait on the child worker thread to exit
+        print("Executing in daemon mode. Suspending main thread...")
+        child_thread.join()
+        print("Child worker thread died. Exiting...")
+        return 0
+    else:
+        print("Unknown operation mode given. Exiting...")
+        return -1
 
 if __name__ == "__main__":
     main()
