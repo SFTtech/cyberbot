@@ -9,7 +9,7 @@ VOTE_TIME = 15              # Amount seconds a vote takes
 VOTE_IN_PROGRESS = False    # Mutex to prevent multiple parallel votes
 VOTE_COUNT = 0              # Amount of unique vote participants
 VOTE_BALANCE = 0            # Sum of votes (+1/-1)
-KICK_MIN_COUNT = 1          # Minimum amount of votes required for votekick eval
+KICK_MIN_COUNT = 4          # Minimum amount of votes required for votekick eval
 VOTER_LIST = []             # UserIDs that already voted in the current vote
 
 def register_to(bot):
