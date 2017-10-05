@@ -62,7 +62,7 @@ def register_to(bot):
         # check if enough people voted
         if (VOTE_COUNT < KICK_MIN_COUNT):
             message += ", this is not enough to evaluate the result.\n"
-            message += ". Votekick aborted."
+            message += "Votekick aborted."
         else:
             message += ". Vote balance for kicking {}: ".format(user)
             message += str(VOTE_BALANCE) + '.\n'
