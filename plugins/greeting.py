@@ -20,7 +20,7 @@ def register_to(bot):
 
     # Add a regex handler waiting for the word Hi
     hi_handler = MRegexHandler("(\s+|^)(([sS]er(v[ua])?s)|" +
-                               "([[M|m]oin])+|" +
+                               "([mM]oin)+|" +
                                "(([oOaA]?)" +
                                "((bend)|([hH](ey(ho)?|i|ai|ello|allo)))))" +
                                "(\s+|$)",
