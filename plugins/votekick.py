@@ -5,7 +5,7 @@ from matrix_bot_api.mregex_handler import MRegexHandler
 
 HELP_DESC = ("!votekick <user> [<reason>]\t"
              "-\tStart a vote to kick the specified user")
-VOTE_TIME = 15              # Amount seconds a vote takes
+VOTE_TIME = 30              # Amount seconds a vote takes
 VOTE_IN_PROGRESS = False    # Mutex to prevent multiple parallel votes
 VOTE_COUNT = 0              # Amount of unique vote participants
 VOTE_BALANCE = 0            # Sum of votes (+1/-1)
