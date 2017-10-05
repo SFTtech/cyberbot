@@ -4,7 +4,7 @@ import threading
 from time import sleep
 from matrix_bot_api.mcommand_handler import MCommandHandler
 
-HELP_DESC = ("!activate\t\t-\tActivate the hackerspace status watch")
+HELP_DESC = ("!activate\t\t\t\t\t\t-\tActivate the hackerspace status watch")
 ROOM_TOPIC = "Hackerspace: {} | StuStaNet e. V. public chatroom"
 #ROOM_TOPIC = "Arkadenraum SSoC: {} | StuStaNet e. V. public chatroom"
 current_state = False

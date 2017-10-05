@@ -1,6 +1,6 @@
 from matrix_bot_api.mcommand_handler import MCommandHandler
 
-HELP_DESC = "!industry++\t-\tHeralds the dawn of a new industial era"
+HELP_DESC = "!industry++\t\t\t\t\t-\tHeralds the dawn of a new industial era"
 
 def register_to(bot):
 

@@ -87,7 +87,7 @@ def main():
                 print("  [+] {} loaded".format(modname))
 
     # Build the help message from the collected plugin description fragments
-    help_desc.sort(reverse=True)
+    help_desc.sort()
 
     line = ''
     for i in range(80):

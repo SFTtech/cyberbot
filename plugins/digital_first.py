@@ -1,6 +1,7 @@
 from matrix_bot_api.mcommand_handler import MCommandHandler
 
-HELP_DESC = "!digital++\t-\tIncrease the digitalization counter (Lindner Style)"
+HELP_DESC = ("!digital++\t\t\t\t\t-\tIncrease the digitalization counter"
+             "(Lindner Style)")
 
 def register_to(bot):
 
