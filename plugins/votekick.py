@@ -53,6 +53,7 @@ def register_to(bot):
         global VOTE_COUNT
         global VOTE_BALANCE
         global KICK_MIN_COUNT
+        global VOTER_LIST
 
         time.sleep(VOTE_TIME)
 
@@ -91,6 +92,7 @@ def register_to(bot):
         global VOTE_COUNT
         global VOTE_BALANCE
         global KICK_MIN_COUNT
+        global VOTER_LIST
 
         if (VOTE_IN_PROGRESS):
             room.send_text("There's already a vote in progress. Aborting")
