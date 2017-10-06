@@ -88,7 +88,7 @@ def register_to(bot):
         return False
 
     # executed by a new thread. Wait for the vote to end and print results
-    def vote_wait(room, event, user, reason):
+    def vote_wait(room, event, user, reason, initiator):
         global VOTE_TIME
         global VOTE_IN_PROGRESS
         global VOTE_COUNT
@@ -110,14 +110,24 @@ def register_to(bot):
             # check if enough people voted
             if (VOTE_COUNT < KICK_MIN_COUNT):
                 message += ", this is not enough to evaluate the result.\n"
-                message += "Votekick aborted."
+                message += "Votekick aborted. "
+                message += "Kicking the initiator instead."
+
+                if (not room.kick_user(initiator,reason)):
+                    print("Kicking failed, not enough power.")
+
             else:
                 message += ". Vote balance for kicking {}: ".format(user)
                 message += str(VOTE_BALANCE) + '.\n'
 
                 # check the vote balance
                 if (VOTE_BALANCE <= 0):
-                    message += user + " will not be kicked."
+                    message += user + " will not be kicked. "
+                    message += "Kicking the initiator instead."
+
+                    if (not room.kick_user(initiator,reason)):
+                        print("Kicking failed, not enough power.")
+
                 else:
                     message += "Kicking {}.".format(user)
 
@@ -151,6 +161,7 @@ def register_to(bot):
         VOTER_LIST = {}
 
         user = get_target_user(room, event)
+        initiator = event['sender']
 
         if (user == None):
             VOTE_IN_PROGRESS = False
@@ -171,7 +182,8 @@ def register_to(bot):
         room.send_text(message)
 
         # start a timer thread to wait for the vote to end
-        t = threading.Thread(target=vote_wait, args = (room,event,user,reason))
+        t = threading.Thread(target=vote_wait,
+                             args = (room,event,user,reason,initiator))
         t.start()
 
     # called upon +1/-1 commands
