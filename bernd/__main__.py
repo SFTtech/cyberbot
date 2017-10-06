@@ -77,6 +77,8 @@ def main():
 
             # Provide every module with a set of relevant environment vars
             module.TRUSTED_ROOMS = rooms    # Trusted rooms to join
+            module.CONFIG_USER = username   # Username, read from config file
+            module.CONFIG_SERVER = server   # Server, read from config file
 
             # skip help module, collect all help texts before registering
             if (modname == 'plugins.help'):
