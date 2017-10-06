@@ -48,13 +48,19 @@ def register_to(bot):
 
     # check if the a vote to kick the bot was started and kick the traitors
     def check_treason(room, event, user, reason):
+        # remove protocol
         if '//' in CONFIG_SERVER:
             server_url_short = CONFIG_SERVER[CONFIG_SERVER.find('//')+2:]
         else:
             server_url_short = CONFIG_SERVER
 
+        # remove sub-level domains
+        if (server_url_short.count('.') == 2):
+            server_url_short = server_url_short[server_url_short.find('.')+1:]
+
         full_uid = "@{}:{}".format(CONFIG_USER, server_url_short)
 
+        # check if our bot is the target of the votekick
         if (full_uid == user):
 
             traitors = []
@@ -66,7 +72,7 @@ def register_to(bot):
                 message = "Despite the heresy, i will temper justice with "
                 message +="mercy. This time."
                 room.send_text(message)
-                return False
+                return True
 
             message = "Now kicking all the vicious traitors, daring to incur"
             message += " the dreadful wrath "
@@ -79,6 +85,7 @@ def register_to(bot):
                     print("Kicking failed, not enough power.")
 
             return True
+        return False
 
     # executed by a new thread. Wait for the vote to end and print results
     def vote_wait(room, event, user, reason):
@@ -117,7 +124,7 @@ def register_to(bot):
                     if (not room.kick_user(user,reason)):
                         print("Kicking failed, not enough power.")
 
-                room.send_text(message)
+            room.send_text(message)
 
         # reset vars
         VOTE_COUNT = 0
