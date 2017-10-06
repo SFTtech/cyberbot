@@ -13,19 +13,10 @@ statuswatch_running = False
 def register_to(bot):
 
     def get_status():
-        r = requests.get('http://hackerspace.stusta.de')
-        content = r.text
-        pos = content.find("<body class=")
-
-        if (pos == -1):
-            print("Failed to retrieve Hackerspace status from website...")
+        r=requests.get("http://hackerspace.stusta.de/current.json")
+        if r.status_code != 200:
             return False
-
-        pos += 13       # skip the body class statement and quotations marks
-        if (content[pos:pos+5] == 'offen'):
-            return True
-        else:
-            return False
+        return r.json()["state"]
 
     def start_poll(room, event):
         global current_state
@@ -36,8 +27,7 @@ def register_to(bot):
 
             if (current_state != new_state):
                 current_state = new_state
-                txt = 'offen' if current_state else 'geschlossen'
-                room.set_room_topic(ROOM_TOPIC.format(txt))
+                room.set_room_topic(ROOM_TOPIC.format(new_state))
 
             sleep(10)
 
