@@ -1,0 +1,13 @@
+[Unit]
+Description=Bernd Lauert Matrix Chatbot
+After=multi-user.target
+Requires=multi-user.target
+
+[Service]
+Type=simple
+User=bernd
+WorkingDirectory=/home/bernd
+EnvironmentFile=/etc/default/bernd-lauert
+ExecStart=/usr/bin/python3 ./bernd -c ./bernd.ini -m daemon
+Restart=always
+RestartSec=3
