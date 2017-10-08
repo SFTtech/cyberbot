@@ -73,7 +73,11 @@ def main():
                 modname, str(filename))
 
             module = loader.load_module(modname)
-            help_desc.append(module.HELP_DESC)  # collect plugin help texts
+
+            # collect plugin help texts
+            help_text_arr = module.HELP_DESC.split('\n') # allow multiple desc
+            for h in help_text_arr:
+                help_desc.append(h)
 
             # Provide every module with a set of relevant environment vars
             module.TRUSTED_ROOMS = rooms    # Trusted rooms to join
