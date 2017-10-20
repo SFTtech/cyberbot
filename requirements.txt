@@ -4,3 +4,4 @@ importlib
 matrix_bot_api
 pathlib
 random
+sqlite3
