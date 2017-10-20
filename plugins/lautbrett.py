@@ -10,7 +10,8 @@ def register_to(bot):
     def laut_callback(room, event):
         args = event['content']['body'].split()
         args.pop(0)
-        sound_id = int(args[0])
+        sound_id = args[0]
+
         r = requests.get('http://10.150.9.122:5000/set/{}'
                          .format(sound_id)
         )
