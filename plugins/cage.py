@@ -3,7 +3,7 @@ from matrix_bot_api.mcommand_handler import MCommandHandler
 import requests
 
 
-HELP_DESC = (""""!cage                 -   Nicolas Cage""")
+HELP_DESC = ("!cage\t\t\t\t\t\t-\tDisplays an image of the greatest actor of all times.\n")
 
 upload_url = 'https://matrix.org/_matrix/media/r0/upload'
 

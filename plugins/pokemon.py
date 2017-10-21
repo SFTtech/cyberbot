@@ -3,7 +3,7 @@ from matrix_bot_api.mcommand_handler import MCommandHandler
 import requests
 
 
-HELP_DESC = ("!pokemon\t\t\t\t\t\t-\tRetrieves the name of a pokemon number. Eg. !pokemon 4 yields Glumanda.\n")
+HELP_DESC = ("!pokemon\t\t\t\t\t-\tRetrieves the name of a pokemon by number. Eg. !pokemon 4 yields Glumanda.\n")
 
 download_url = 'http://pokeapi.co/api/v2/pokemon/'
 
