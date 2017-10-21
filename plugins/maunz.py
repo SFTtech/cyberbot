@@ -3,7 +3,7 @@ from matrix_bot_api.mcommand_handler import MCommandHandler
 import requests
 
 
-HELP_DESC = (""""!maunz                 -   miau""")
+HELP_DESC = ("!maunz\t\t\t\t\t\t-\tDisplays cute kittens from loremflickr\n")
 
 upload_url = 'https://matrix.org/_matrix/media/r0/upload'
 

@@ -1,7 +1,7 @@
 from matrix_bot_api.mregex_handler import MRegexHandler
 from random import choice
 
-HELP_DESC = "Hi bernd"
+HELP_DESC = "hi bernd\t\t\t\t\t\t-\tSeems like other bots are in love with bernd the great 😍"
 
 
 def register_to(bot):
