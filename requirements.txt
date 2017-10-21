@@ -1,7 +1,5 @@
 argparse
 configparser
-importlib
+importlib2
 matrix_bot_api
 pathlib
-random
-sqlite3
