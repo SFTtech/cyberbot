@@ -12,7 +12,7 @@ def register_to(bot):
         args.pop(0)
         sound_id = args[0]
 
-        r = requests.get('http://10.150.9.122:5000/set/{}'
+        r = requests.get('https://bot.stusta.de/set/{}'
                          .format(sound_id)
         )
 
