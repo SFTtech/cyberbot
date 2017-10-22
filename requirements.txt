@@ -3,3 +3,4 @@ configparser
 importlib2
 matrix_bot_api
 pathlib
+PyMVGLife
