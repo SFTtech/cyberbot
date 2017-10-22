@@ -16,7 +16,7 @@ def register_to(bot):
                          .format(sound_id)
         )
 
-        room.send_text("das lautbrett spielt {} ..., danke {}".format(sound_id, event['sender']))
+#        room.send_text("das lautbrett spielt {} ..., danke {}".format(sound_id, event['sender']))
 
     # Add a command handler waiting for the echo command
     laut_handler = MCommandHandler("laut", laut_callback)
