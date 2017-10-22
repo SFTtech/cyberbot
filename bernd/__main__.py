@@ -97,6 +97,13 @@ def main():
 
     # Build the help message from the collected plugin description fragments
     help_desc.sort()
+    sort_desc = help_desc
+    help_desc = []
+
+    # Remove empty docstrings
+    for i in sort_desc:
+        if (i != ''):
+            help_desc.append(i)
 
     line = ''
     for i in range(80):
