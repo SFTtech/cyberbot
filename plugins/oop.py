@@ -2,8 +2,7 @@ from matrix_bot_api.mcommand_handler import MCommandHandler
 from random import choice, randint
 
 
-HELP_DESC = "!oop\t\t\t\t\t\t-\tTurns your argument into a class. JW wanted bernd to have more classes, now it does! You are welcome.\n"
-
+HELP_DESC = "!oop\t\t\t\t\t\t-\tTurns your argument into a class."
 
 def register_to(bot):
     oop_names = ['Factory', 'Manager', 'Handler', 'Class', 'Object', 'Producer', 'Actor', 'Mirror']
