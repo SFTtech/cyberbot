@@ -7,17 +7,21 @@ import requests
 
 HELP_DESC = ("!pot\t\t\t\t\t\t-\tDisplays the current meal at Pot.")
 
+#pot url
 link = "https://pot.stusta.de/plan.json"
 
+#search url
 imageSearch = "https://api.qwant.com/api/search/images?count=1&offset=1&q=%s"
 
-
+#determinates the month of day from the given argument
 def getDate(args, room):
+    #if an argument was passed
     if args:
         dateStr = args[0]
-        try:
+        #if the arg is confertable to an int
+        if isinstance(dateStr, int):
             return int(dateStr)
-        except:
+        else:
             if args[0] == "morgen":
                 return datetime.now().day
             elif dateStr == "übermorgen" or dateStr == "uebermorgen":
@@ -31,7 +35,8 @@ def getDate(args, room):
                 try:
                     return datetime.strptime(dateStr, '%d.%m.').day - 1
                 except:
-                    room.send_text("Usage: !pot <date>, date as dd.mm. or heute/morgen/übermorgen")
+                    #if it is not confertible show error massage
+                    room.send_text("Usage: !pot <date>, date as dd.mm., dd or heute/morgen/übermorgen")
 
     else:
         return datetime.now().day - 1
@@ -53,27 +58,31 @@ def register_to(bot):
             currentDayInfo["meal"]) + "</strong> im Pot. Komm doch im O-Haus vorbei :)<br>" + \
                     "Küche: " + currentDayInfo["kitchen"] + "; Bar: " + currentDayInfo["bar"]
 
+        #if the day is not today, change "heute"
         if indexDay != datetime.now().day - 1:
             strToSend = strToSend.replace("heute", str(indexDay + 1) + "." + str(datetime.now().month) + ".")
+        #if there is an event
         if currentDayInfo["event"]:
             strToSend += "<br>Außerdem findet heute folgendes Event statt: <strong>" + currentDayInfo[
                 "event"] + "</strong>"
 
         strToSend += "<br><br>Weiter Infos findest du auf https://pot.stusta.de"
 
+        #url for the image search
         webimgstr = imageSearch.replace("%s", urllib.parse.quote_plus(currentDayInfo["meal"]))
-        print(webimgstr)
-
+        #http request object
         img = urllib.request.Request(
             webimgstr,
             headers={'User-Agent': 'Mozilla/5.0'})
         img = urllib.request.urlopen(img).read()
         img = json.loads(img)
         imgData = img["data"]["result"]["items"][0]["media"]
-        print(imgData)
 
+        #request meal image
         r = requests.get(imgData)
+        #if request was successful
         if r:
+            #upöoad and display image
             img = r.content
             typ = r.headers['content-type']
             print('Downloaded', typ)
@@ -82,6 +91,7 @@ def register_to(bot):
             uri = up['content_uri']
             room.send_image(uri, currentDayInfo["meal"])
 
+        #send information text
         room.send_html(strToSend)
 
     pot_handler = MCommandHandler("pot", pot_handler)

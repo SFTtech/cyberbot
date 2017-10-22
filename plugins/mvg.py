@@ -3,7 +3,7 @@ from matrix_bot_api.mcommand_handler import MCommandHandler
 import MVGLive
 import json
 
-HELP_DESC = ("!mvg or !mvv (optional)<offset in Minutes>\t\t\t\t\t-\tDisplay stusta depatures")
+HELP_DESC = ("!(mvg|mvv) <minutes>\t\t\t\t\t-\tDisplay stusta depatures")
 
 def register_to(bot):
 
