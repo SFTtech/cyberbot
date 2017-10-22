@@ -40,7 +40,7 @@ def getDate(args, room):
 def register_to(bot):
     def pot_handler(room, event):
         potJson = urllib.request.urlopen(link).read()
-        data = json.loads(potJson)
+        data = json.loads(potJson.decode())
 
         args = event['content']['body'].split()
         args.pop(0)
@@ -68,7 +68,7 @@ def register_to(bot):
             webimgstr,
             headers={'User-Agent': 'Mozilla/5.0'})
         img = urllib.request.urlopen(img).read()
-        img = json.loads(img)
+        img = json.loads(img.decode())
         imgData = img["data"]["result"]["items"][0]["media"]
         print(imgData)
 
