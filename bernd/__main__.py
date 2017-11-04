@@ -72,46 +72,36 @@ def main():
             modname = 'plugins.%s' % filename.stem
             loader = importlib.machinery.SourceFileLoader(
                 modname, str(filename))
+            try:
+                module = loader.load_module(modname)
 
-            module = loader.load_module(modname)
+                # collect plugin help texts
+                help_text_arr = module.HELP_DESC.split('\n') # allow multiple desc
+                for h in help_text_arr:
+                    help_desc.append(h)
 
-            # collect plugin help texts
-            help_text_arr = module.HELP_DESC.split('\n') # allow multiple desc
-            for h in help_text_arr:
-                help_desc.append(h)
+                # Provide every module with a set of relevant environment vars
+                module.DB_PATH = 'bernd.db'     # relative path to the sqlite3-dtb
+                module.COUNTER_TAB = 'counters' # Name of counter table in database
+                module.TRUSTED_ROOMS = rooms    # Trusted rooms to join
+                module.CONFIG_USER = username   # Username, read from config file
+                module.CONFIG_SERVER = server   # Server, read from config file
 
-            # Provide every module with a set of relevant environment vars
-            module.DB_PATH = 'bernd.db'     # relative path to the sqlite3-dtb
-            module.COUNTER_TAB = 'counters' # Name of counter table in database
-            module.TRUSTED_ROOMS = rooms    # Trusted rooms to join
-            module.CONFIG_USER = username   # Username, read from config file
-            module.CONFIG_SERVER = server   # Server, read from config file
-
-            # skip help module, collect all help texts before registering
-            if (modname == 'plugins.help'):
-                help_module = module
-                help_modname = modname
-            else:
-                module.register_to(bot)
-                print("  [+] {} loaded".format(modname))
-
+                # skip help module, collect all help texts before registering
+                if (modname == 'plugins.help'):
+                    help_module = module
+                    help_modname = modname
+                else:
+                    module.register_to(bot)
+                    print("  [+] {} loaded".format(modname))
+            except ImportError as e:
+                print("  [!] {} not loaded: {}".format(modname, str(e)))
     # Build the help message from the collected plugin description fragments
-    help_desc.sort()
-    sort_desc = help_desc
-    help_desc = []
-
-    # Remove empty docstrings
-    for i in sort_desc:
-        if (i != ''):
-            help_desc.append(i)
-
-    line = ''
-    for i in range(80):
-        line += '-'
-    help_desc.insert(0, line)
-
-    help_desc.insert(0, '\nBernd Lauert Commands and Capabilities')
-    help_txt = "\n".join(help_desc)
+    help_txt = '\n'.join([
+            '-' * 80,
+            '',
+            "Bernd Lauert Commands and Capabilities"
+            ] + [ e for e in sorted(help_desc) if e != '' ])
 
     with open('help_text', 'w') as f:
         f.write(help_txt)
@@ -145,7 +135,6 @@ def main():
                     return 0
             except EOFError:
                 return 0
-
     elif (exec_mode == "daemon"):
         # Wait on the child worker thread to exit
         print("Executing in daemon mode. Suspending main thread...")
