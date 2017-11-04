@@ -1,66 +1,52 @@
 import requests
-import threading
-
+from threading import Thread
 from time import sleep
 from matrix_bot_api.mcommand_handler import MCommandHandler
 
-HELP_DESC = ("!activate\t\t\t\t\t\t-\tActivate the hackerspace status watch")
-ROOM_TOPIC = "Hackerspace: {} | StuStaNet e. V. public chatroom"
-#ROOM_TOPIC = "Arkadenraum SSoC: {} | StuStaNet e. V. public chatroom"
-current_state = False
-statuswatch_running = False
+HELP_DESC = ("\t\t\t\t\t\t\t-\tUpdates room topic according to haspa status")
+TRUSTED_ROOMS = []
 
-def register_to(bot):
+class StatusWatch:
+    current_state = None
+    ROOM_TOPIC = "Hackerspace: {} | StuStaNet e. V. public chatroom"
+    #ROOM_TOPIC = "Arkadenraum SSoC: {} | StuStaNet e. V. public chatroom"
 
-    def get_status():
-        r = requests.get('http://hackerspace.stusta.de')
-        content = r.text
-        pos = content.find("<body class=")
+    def __init__(self, bot):
+        self.bot = bot
+        self.thread = Thread(target=self.start_poll)
+        self.thread.start()
 
-        if (pos == -1):
-            print("Failed to retrieve Hackerspace status from website...")
-            return False
-
-        pos += 13       # skip the body class statement and quotations marks
-        if (content[pos:pos+5] == 'offen'):
-            return True
-        else:
-            return False
-
-    def start_poll(room, event):
-        global current_state
-
+    def start_poll(self):
+        """
+        Polling thread requesting the status every 10 seconds
+        """
+        # The good version
+        #current_state = self.get_status()
+        # the debug version
+        current_state = None
         while True:
-            # check if a status change happened
-            new_state = get_status()
-
+            new_state = self.get_status()
             if (current_state != new_state):
                 current_state = new_state
-                txt = 'offen' if current_state else 'geschlossen'
-                room.set_room_topic(ROOM_TOPIC.format(txt))
-
+                self.set_status(new_state)
             sleep(10)
 
-    def activate_callback(room, event):
-        global statuswatch_running
+    def get_status(self):
+        r=requests.get("http://hackerspace.stusta.de/current.json")
+        if r.status_code != 200:
+            return False
+        return r.json()["state"]
 
-        # ignore, if this feature is requested in a private room
-        if (event['room_id'] not in TRUSTED_ROOMS):
-            room.send_text("This feature is not available in this room")
-            return
+    def set_status(self, new_state):
+        global TRUSTED_ROOMS
+        for r in TRUSTED_ROOMS:
+            try:
+                print("Updating room topic", new_state, "of room", r)
+                room = self.bot.client.get_rooms()[r]
+                room.set_room_topic(self.ROOM_TOPIC.format(new_state))
+            except KeyError:
+                # Not connected to trusted room
+                pass
 
-        if (not statuswatch_running):
-            t = threading.Thread(target=start_poll, args=(room,event))
-            t.start()
-            statuswatch_running = True
-        else:
-            room.send_text("Hackerspace status watch is already in effect.")
-
-    activate_handler = MCommandHandler("activate", activate_callback)
-    bot.add_handler(activate_handler)
-    """
-    def topic_callback(room, event):
-        state = event['content']['body']
-        state = state.split(' ')[1]
-        room.set_room_topic(ROOM_TOPIC.format(state))
-    """
+def register_to(bot):
+    watch = StatusWatch(bot)
