@@ -98,9 +98,9 @@ def main():
                 print("  [!] {} not loaded: {}".format(modname, str(e)))
     # Build the help message from the collected plugin description fragments
     help_txt = '\n'.join([
+            "Bernd Lauert Commands and Capabilities"
             '-' * 80,
             '',
-            "Bernd Lauert Commands and Capabilities"
             ] + [ e for e in sorted(help_desc) if e != '' ])
 
     with open('help_text', 'w') as f:

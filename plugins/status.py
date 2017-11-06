@@ -3,7 +3,7 @@ from threading import Thread
 from time import sleep
 from matrix_bot_api.mcommand_handler import MCommandHandler
 
-HELP_DESC = ("\t\t\t\t\t\t\t-\tUpdates room topic according to haspa status")
+HELP_DESC = ("(automatic)\t\tUpdates room topic according to haspa status")
 TRUSTED_ROOMS = []
 
 class StatusWatch:
