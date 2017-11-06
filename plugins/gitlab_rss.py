@@ -1,6 +1,6 @@
 from matrix_bot_api.mcommand_handler import MCommandHandler
 import feedparser
-from threading import Timer
+from threading import Timer, Thread
 import dbm.ndbm
 
 HELP_DESC = ("\t\t\t\t\t\t\t-\tWill post changes in the stustanet gitlab")
@@ -10,6 +10,8 @@ class RSSGitlabFeed:
     def __init__(self, bot):
         self.bot = bot
         self.dbmfile = "feed_read.dbm"
+        self.thread = Thread(target=self.start)
+        self.thread.start()
 
     def start(self):
         self.check_for_changes()
@@ -43,4 +45,3 @@ class RSSGitlabFeed:
 
 def register_to(bot):
     feedreader = RSSGitlabFeed(bot)
-    feedreader.start()
