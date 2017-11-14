@@ -28,7 +28,7 @@ class RSSGitlabFeed:
         Generate a list of new entries, and mark the new entries as read
         """
         with dbm.open(self.dbmfile, 'c') as db:
-            for entry in feed['entries']:
+            for entry in reversed(feed['entries']):
                 if entry['id'] not in db:
                     self.notify_update(entry)
                     db[entry['id']] = "1"
@@ -39,8 +39,14 @@ class RSSGitlabFeed:
         If the room is not yet set, it will terminate but also not record any
         recorded change. with is nice.
         """
-        for r in self.bot.client.get_rooms().values():
-            r.send_notice("{} ({})".format(entry['title'], entry['link']))
+        # Censor the link that is going to be displayed, if it contains the
+        # RSS token - this is a horrible workaround for gitlab
+        if ".atom?rss_token=" in entry['link']:
+            entry['link'] = "https://gitlab.stusta.de/stustanet"
+
+        for rid, r in self.bot.client.get_rooms().items():
+            if rid in TRUSTED_ROOMS:
+                r.send_notice("{} ({})".format(entry['title'], entry['link']))
 
 
 def register_to(bot):
