@@ -1,6 +1,6 @@
 from matrix_bot_api.mcommand_handler import MCommandHandler
 
-HELP_DESC = ("!help\t\t\t\t\t\t\t-\tDisplay this help message")
+HELP_DESC = ("!help\t\t\t\t\t\t-\tDisplay this help message")
 
 def register_to(bot):
     try:
