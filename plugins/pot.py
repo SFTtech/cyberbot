@@ -66,7 +66,7 @@ def register_to(bot):
             strToSend += "<br>Außerdem findet heute folgendes Event statt: <strong>" + currentDayInfo[
                 "event"] + "</strong>"
 
-        strToSend += "<br><br>Weiter Infos findest du auf https://pot.stusta.de"
+        strToSend += "<br><br>Weitere Infos findest du auf https://pot.stusta.de"
 
         #url for the image search
         webimgstr = imageSearch.replace("%s", urllib.parse.quote_plus(currentDayInfo["meal"]))
@@ -76,10 +76,15 @@ def register_to(bot):
             headers={'User-Agent': 'Mozilla/5.0'})
         img = urllib.request.urlopen(img).read()
         img = json.loads(img.decode())
-        imgData = img["data"]["result"]["items"][0]["media"]
 
-        #request meal image
-        r = requests.get(imgData)
+        # Abort image upload, if no image for the meal was found
+        try:
+            imgData = img["data"]["result"]["items"][0]["media"]
+            #request meal image
+            r = requests.get(imgData)
+        except IndexError as e:
+            r = None
+
         #if request was successful
         if r:
             #upöoad and display image
