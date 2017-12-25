@@ -15,7 +15,14 @@ def register_to(bot):
     # Highlight all room members
     def all_callback(room, event):
         memb = room.get_joined_members()
-        room.send_text(' '.join(memb))
+        memb_names = []
+        args = event['content']['body'].split()
+        args.pop(0)
+
+        for m in memb:
+            memb_names.append(m.get_friendly_name())
+
+        room.send_text(' '.join(memb_names) + ': ' + ' '.join(args))
 
     # Add a command handler waiting for the echo command
     echo_handler = MCommandHandler("echo", echo_callback)
