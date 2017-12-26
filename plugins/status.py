@@ -9,10 +9,10 @@ import socket
 
 HELP_DESC = ("(automatic)\t\tUpdates room topic according to haspa status")
 TRUSTED_ROOMS = []
+hauptbahnhof_port = 1337
 
 class StatusWatch:
     current_state = None
-    hauptbahnhof_port = 1337
     ROOM_TOPIC = "Hackerspace: {} | StuStaNet e. V. public chatroom"
     #ROOM_TOPIC = "Arkadenraum SSoC: {} | StuStaNet e. V. public chatroom"
 
