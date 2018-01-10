@@ -38,10 +38,12 @@ def register_to(bot):
         room_users = room.get_joined_members()
 
         for u in room_users:
-            if (room_users[u]['displayname'] == target_user
-                or u == target_user):
+            if (u.displayname and u.displayname == target_user):
                 return u
-
+        for u in room_users:
+            if (target_user in u.user_id):
+                return u
+        
         room.send_text("No matching user \'{}\' ".format(target_user) +
                        "has been found. Aborting")
         return None
@@ -61,7 +63,7 @@ def register_to(bot):
         full_uid = "@{}:{}".format(CONFIG_USER, server_url_short)
 
         # check if our bot is the target of the votekick
-        if (full_uid == user):
+        if (full_uid == user.user_id):
 
             traitors = []
             for v in VOTER_LIST:
@@ -106,7 +108,6 @@ def register_to(bot):
 
         # in case of treason, stop evaluating
         if (not treason):
-
             # check if enough people voted
             if (VOTE_COUNT < KICK_MIN_COUNT):
                 message += ", this is not enough to evaluate the result.\n"
@@ -117,21 +118,21 @@ def register_to(bot):
                     print("Kicking failed, not enough power.")
 
             else:
-                message += ". Vote balance for kicking {}: ".format(user)
+                message += ". Vote balance for kicking {}: ".format(user.user_id)
                 message += str(VOTE_BALANCE) + '.\n'
 
                 # check the vote balance
                 if (VOTE_BALANCE <= 0):
-                    message += user + " will not be kicked. "
+                    message += user.user_id + " will not be kicked. "
                     message += "Kicking the initiator instead."
 
                     if (not room.kick_user(initiator,reason)):
                         print("Kicking failed, not enough power.")
 
                 else:
-                    message += "Kicking {}.".format(user)
+                    message += "Kicking {}.".format(user.user_id)
 
-                    if (not room.kick_user(user,reason)):
+                    if (not room.kick_user(user.user_id,reason)):
                         print("Kicking failed, not enough power.")
 
             room.send_text(message)
@@ -168,7 +169,8 @@ def register_to(bot):
             return
 
         reason = get_reason(room, event)
-        message = "Starting a votekick for \'{}\'. ".format(user)
+        displayname = user.displayname if user.displayname else user.user_id
+        message = "Starting a votekick for \'{}\'. ".format(displayname)
 
         if (reason == None):
             reason = "Votekick"
@@ -206,6 +208,7 @@ def register_to(bot):
 
         VOTE_COUNT += 1
         VOTE_BALANCE += int(vote)
+        print("Votekick: {}/{}".format(VOTE_BALANCE, VOTE_COUNT))
 
     kick_handler = MCommandHandler("votekick", kick_callback)
     bot.add_handler(kick_handler)
