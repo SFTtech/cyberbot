@@ -79,7 +79,7 @@ class StatusWatch:
         resp = self.stream.recv(2048)
 
         try:
-            jsn = json.loads(resp)
+            jsn = json.loads(resp.decode())
         except json.decoder.JSONDecodeError as e:
             return False
 
@@ -117,7 +117,7 @@ class StatusWatch:
                 continue
 
             try:
-                jsn = json.loads(resp)
+                jsn = json.loads(resp.decode())
             except json.decoder.JSONDecodeError as e:
                 print("  [-] Received malformed JSON from Hauptbahnhof." +
                       "Reconnecting...")

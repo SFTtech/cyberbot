@@ -59,7 +59,7 @@ class HackerspaceLink:
             return None
 
         try:
-            jsn = json.loads(resp)
+            jsn = json.loads(resp.decode())
         except json.decoder.JSONDecodeError as e:
             print("  [-] Hauptbahnhof send malformed JSON. Aborting.")
             self.sstream.close()
