@@ -93,7 +93,7 @@ class HackerspaceLink:
                 return
             if (jsn['state'] == 'SUCCESS'):
                 num = 'no' if (jsn['msg'] == 0) else jsn['msg']
-                text = str("Currently, {} auxiliary ethernet ".format(num)
+                text = str("Currently, {} auxiliary ".format(num)
                           +"devices are connected to the Hackerspace network.")
                 room.send_text(text)
 
@@ -124,8 +124,8 @@ class HackerspaceLink:
                 self.sstream.close()
                 return
 
-            if (jsn['state'] == 'SUCCESS'):
-                room.send_text("Flashing signal lamp in Hackerspace...")
+            if (jsn['state'] != 'SUCCESS'):
+                room.send_text("Flashing signal lamp in Hackerspace failed")
 
         # If the receive command failed, error is already printed -> do nothing
 
