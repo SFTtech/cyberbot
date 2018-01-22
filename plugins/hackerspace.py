@@ -112,7 +112,7 @@ class HackerspaceLink:
             return
 
         # Try to trigger the alarm at the hauptbahnhof
-        jsn = {'op': 'SET', 'data': 'BULB'}
+        jsn = {'op': 'SET', 'data': 'ALARM'}
         self.sstream.send(json.dumps(jsn).encode())
 
         jsn = self.hauptbahnhof_recv(2048)
