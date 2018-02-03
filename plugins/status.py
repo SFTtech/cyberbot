@@ -102,7 +102,7 @@ class StatusWatch:
             try:
                 resp = self.stream.recv(2048)
             except Exception:
-                conn_fail = true
+                conn_fail = True
 
             if (resp == b'' or conn_fail == True):
                 print("  [-] TLS Connection to Hauptbahnhof reset. "
