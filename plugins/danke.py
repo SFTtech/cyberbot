@@ -20,8 +20,8 @@ def register_to(bot):
 
     # Add a command handler waiting for the echo command
     danke_handler = MRegexHandler(
-            "(?:\s|^)"
+            "(?:\W|^)"
             +"((([vV]ielen)?[dD]ank(e?))|([tT](hanks|hx))).*([bB]ernd)"
-            +"(?:\s|$)", danke_callback)
+            +"(?:\W|$)", danke_callback)
 
     bot.add_handler(danke_handler)
