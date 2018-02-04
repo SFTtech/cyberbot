@@ -23,6 +23,6 @@ def register_to(bot):
                                "([mM]oin)+|" +
                                "(([oOaA]?)" +
                                "((bend)|([hH](ey(ho)?|i|ai|ello|allo)))))" +
-                               "((\s*)(.*)(\s*)[bB]ernd)",
+                               "(((\s(.*))?\s)[bB]ernd)",
                                 hi_callback)
     bot.add_handler(hi_handler)
