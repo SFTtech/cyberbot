@@ -72,5 +72,5 @@ def register_to(bot):
 
         return False
 
-    bracket_handler = MRegexHandler('^(.*)$', bracket_callback)
+    bracket_handler = MRegexHandler('', bracket_callback)
     bot.add_handler(bracket_handler)

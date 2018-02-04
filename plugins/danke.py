@@ -19,8 +19,9 @@ def register_to(bot):
         room.send_text(event['sender'] + ': ' + t)
 
     # Add a command handler waiting for the echo command
-    danke_handler = MRegexHandler("^(.|\s)*"
-                                  +"((([vV]ielen)?[dD]ank(e?))"
-                                  +"|([tT](hanks|hx)))(.|\s)*"
-                                  +"([bB]ernd)(.|\s)*$", danke_callback)
+    danke_handler = MRegexHandler(
+            "(?:\s|^)"
+            +"((([vV]ielen)?[dD]ank(e?))|([tT](hanks|hx))).*([bB]ernd)"
+            +"(?:\s|$)", danke_callback)
+
     bot.add_handler(danke_handler)
