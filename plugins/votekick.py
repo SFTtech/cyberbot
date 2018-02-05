@@ -84,7 +84,7 @@ def register_to(bot):
 
             for t in traitors:
                 if (not room.kick_user(t,"Treason")):
-                    print("Kicking failed, not enough power.")
+                    print("[-] Kicking failed, not enough power.")
 
             return True
         return False
@@ -115,7 +115,7 @@ def register_to(bot):
                 message += "Kicking the initiator instead."
 
                 if (not room.kick_user(initiator,reason)):
-                    print("Kicking failed, not enough power.")
+                    print("[-] Kicking failed, not enough power.")
 
             else:
                 message += ". Vote balance for kicking {}: ".format(user.user_id)
@@ -127,13 +127,13 @@ def register_to(bot):
                     message += "Kicking the initiator instead."
 
                     if (not room.kick_user(initiator,reason)):
-                        print("Kicking failed, not enough power.")
+                        print("[-] Kicking failed, not enough power.")
 
                 else:
                     message += "Kicking {}.".format(user.user_id)
 
                     if (not room.kick_user(user.user_id,reason)):
-                        print("Kicking failed, not enough power.")
+                        print("[-] Kicking failed, not enough power.")
 
             room.send_text(message)
 
@@ -208,7 +208,7 @@ def register_to(bot):
 
         VOTE_COUNT += 1
         VOTE_BALANCE += int(vote)
-        print("Votekick: {}/{}".format(VOTE_BALANCE, VOTE_COUNT))
+        print("[i] Votekick: {}/{}".format(VOTE_BALANCE, VOTE_COUNT))
 
     kick_handler = MCommandHandler("votekick", kick_callback)
     bot.add_handler(kick_handler)

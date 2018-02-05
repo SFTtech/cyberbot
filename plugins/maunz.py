@@ -9,12 +9,12 @@ upload_url = 'https://matrix.org/_matrix/media/r0/upload'
 
 download_url = 'https://loremflickr.com/'
 
-def register_to(bot):    
+def register_to(bot):
     def maunz_callback(room, event):
         args = event['content']['body'].split()
         # remove the command
         args.pop(0)
-        
+
         if(len(args) < 2):
             r = requests.get(download_url + '300/200')
         else:
@@ -23,9 +23,9 @@ def register_to(bot):
         if(r):
             img = r.content
             typ = r.headers['content-type']
-            print('Downloaded', typ)
+            print('[i] Downloaded', typ)
             up = room.client.api.media_upload(img, typ)
-            print('Uploaded', up)
+            print('[i] Uploaded', up)
             uri = up['content_uri']
             room.send_image(uri, 'Miau')
         else:

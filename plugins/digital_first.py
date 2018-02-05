@@ -60,7 +60,7 @@ def register_to(bot):
             c.execute("insert into {}".format(COUNTER_TAB)
                       + " values ('digital', 0)")
         else:
-            print("Encountered miscellaneous sqlite error:", e)
+            print("[-] Encountered miscellaneous sqlite error:", e)
 
     conn.commit()
     conn.close()

@@ -90,9 +90,9 @@ def register_to(bot):
             #upöoad and display image
             img = r.content
             typ = r.headers['content-type']
-            print('Downloaded', typ)
+            print('[i] Downloaded', typ)
             up = room.client.api.media_upload(img, typ)
-            print('Uploaded', up)
+            print('[i] Uploaded', up)
             uri = up['content_uri']
             room.send_image(uri, currentDayInfo["meal"])
 

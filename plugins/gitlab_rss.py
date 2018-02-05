@@ -4,7 +4,7 @@ from threading import Thread
 import dbm.ndbm
 import time
 
-HELP_DESC = ("\t\t\t\t\t\t\t-\tWill post changes in the stustanet gitlab")
+HELP_DESC = ("(automatic)\t\t-The bot will post changes in stustanet gitlab")
 
 class RSSGitlabFeed:
 
