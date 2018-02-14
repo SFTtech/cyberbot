@@ -30,7 +30,7 @@ def register_to(bot):
         diff = now - last
         diff = diff.seconds
 
-        if diff < cage_ratelimit:
+        if diff < maunz_ratelimit:
             room.send_text('Last Maunz was not long ago, so... no!')
             conn.close()
             return
