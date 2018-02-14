@@ -11,26 +11,34 @@ upload_url = 'https://matrix.org/_matrix/media/r0/upload'
 
 download_url = 'https://www.placecage.com/'
 
+cage_ratelimit = 3600 # 60 seconds * 60 minutes = 1 hour
+
 def register_to(bot):    
     def cage_callback(room, event):
 
         # rate limiting
-        date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+        formatstring = '%Y-%m-%d %H:%M:%S.%f'
+        now = datetime.datetime.now()
+        nowstr = now.strftime(formatstring)[:-3]
         
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("select last from {}".format(RATELIMIT_TAB)
                   + " where name = 'cage'")
-        lastdate = c.fetchall()[0][0]
-        
-        ### todo(stefan.huber@stusta.de):
-        if (date-lastdate) > 60mim:
-            c.execute("update {}".format(COUNTER_TAB)
-                  + " set counter=counter+1 where name = 'industrie'")
+        laststr = c.fetchall()[0][0]
+        last = laststr.strftime(formatstring)
+        diff = now - last
+        diff = diff.seconds
 
-        
+        if diff < cage_ratelimit:
+            room.send_text('Last Cage was postet not long ago, so... no!')
+            conn.close()
+            return
+
+        c.execute("update {}".format(RATELIMIT_TAB)
+                  + " set last={} where name = 'cage'".format(date))
+        conn.commit()
         conn.close()
-
 
         # actual cage code
         args = event['content']['body'].split()
