@@ -166,5 +166,5 @@ def register_to(bot):
     fact_handler = MCommandHandler("catfact", fact_callback)
     bot.add_handler(fact_handler)
 
-    calm_handler = MRegexHandler("([A-ZÄÜÖ]){6,}", calm_callback)
+    calm_handler = MRegexHandler("\b[A-ZÄÜÖ]{6,}\b", calm_callback)
     bot.add_handler(calm_handler)
