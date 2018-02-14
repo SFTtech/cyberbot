@@ -4,6 +4,9 @@ import urllib.parse
 import json
 from datetime import datetime
 import requests
+import datetime
+import sqlite3
+
 
 HELP_DESC = ("!pot\t\t\t\t\t\t\t-\tDisplays the current meal at Pot.")
 
@@ -12,6 +15,8 @@ link = "https://pot.stusta.de/plan.json"
 
 #search url
 imageSearch = "https://api.qwant.com/api/search/images?count=1&offset=1&q=%s"
+
+pot_ratelimit = 900 # 60 seconds * 15 minutes
 
 #determinates the month of day from the given argument
 def getDate(args, room):
@@ -44,6 +49,33 @@ def getDate(args, room):
 
 def register_to(bot):
     def pot_handler(room, event):
+
+        # rate limiting
+        formatstring = '%Y-%m-%d %H:%M:%S.%f'
+        now = datetime.datetime.now()
+        nowstr = now.strftime(formatstring)[:-3]
+        
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("select last from {}".format(RATELIMIT_TAB)
+                  + " where name = 'pot'")
+        laststr = c.fetchall()[0][0]
+        last = laststr.strftime(formatstring)
+        diff = now - last
+        diff = diff.seconds
+
+        if diff < pot_ratelimit:
+            room.send_text('Last pot was postet not long ago, so... no!')
+            conn.close()
+            return
+
+        c.execute("update {}".format(RATELIMIT_TAB)
+                  + " set last={} where name = 'pot'".format(date))
+        conn.commit()
+        conn.close()
+
+        # actual pot code
+
         potJson = urllib.request.urlopen(link).read()
         data = json.loads(potJson.decode())
 
@@ -98,6 +130,37 @@ def register_to(bot):
 
         #send information text
         room.send_html(strToSend)
+
+    conn = sqlite.connect(DB_PATH)
+    c = conn.cursor()
+
+    try:
+        # look if there is an entry for this plugin
+        c.execute("select name from {}".format(RATELIMIT_TAB)
+                  + " where name = 'pot'")
+
+        # if not, create one
+        if (c.fetchall() == []):
+            c.execute("insert into {}".format(RATELIMIT_TAB)
+                      + " values ('pot', '2001-01-01 00:00:00.000')")
+
+    except sqlite3.OperationalError as e:
+        # if the table does not exist
+        if (e.args[0].find('no such table') != -1):
+            # create it
+            c.execute("create table {}".format(RATELIMIT_TAB)
+                      + " (name text, last text)")
+
+            # and add an entry for this plugin
+            c.execute("insert into {}".format(RATELIMIT_TAB)
+                      + " values ('pot', '2001-01-01 00:00:00.000')")
+        else:
+            print("Encountered miscellaneous sqlite error:", e)
+
+    conn.commit()
+    conn.close()
+
+
 
     pot_handler = MCommandHandler("pot", pot_handler)
     bot.add_handler(pot_handler)
