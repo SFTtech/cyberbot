@@ -7,6 +7,8 @@ import socket
 HELP_DESC = ("!alarm\t\t\t\t\t\t-\tFlash the signal light in the Hackerspace\n"
              "!devices\t\t\t\t\t\t-\tShow # of connected ETH devices in space")
 
+ALARM_RATELIMIT = 900 # 60 seconds * 15 Minutes
+
 class HackerspaceLink:
     hauptbahnhof_port = 1337
     sstream = None
@@ -107,6 +109,31 @@ class HackerspaceLink:
             room.send_text("This feature is not available in this room")
             return
 
+        # rate limiting
+        formatstring = '%Y-%m-%d %H:%M:%S.%f'
+        now = datetime.datetime.now()
+        nowstr = now.strftime(formatstring)[:-3]
+        
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("select last from {}".format(RATELIMIT_TAB)
+                  + " where name = 'alarm'")
+        laststr = c.fetchall()[0][0]
+        last = laststr.strftime(formatstring)
+        diff = now - last
+        diff = diff.seconds
+
+        if diff < ALARM_RATELIMIT:
+            room.send_text('Last Alarm was not long ago, so... no!')
+            conn.close()
+            return
+
+        c.execute("update {}".format(RATELIMIT_TAB)
+                  + " set last={} where name = 'alarm'".format(date))
+        conn.commit()
+        conn.close()
+
+        # actual alarm code
         if (not self.tls_connect()):
             print("  [-] Couldn't connect to Hauptbahnhof. Aborting alarm.")
             return
@@ -130,5 +157,35 @@ class HackerspaceLink:
         # If the receive command failed, error is already printed -> do nothing
 
 def register_to(bot):
+    
+    conn = sqlite.connect(DB_PATH)
+    c = conn.cursor()
+
+    try:
+        # look if there is an entry for this plugin
+        c.execute("select name from {}".format(RATELIMIT_TAB)
+                  + " where name = 'alarm'")
+
+        # if not, create one
+        if (c.fetchall() == []):
+            c.execute("insert into {}".format(RATELIMIT_TAB)
+                      + " values ('alarm', '2001-01-01 00:00:00.000')")
+
+    except sqlite3.OperationalError as e:
+        # if the table does not exist
+        if (e.args[0].find('no such table') != -1):
+            # create it
+            c.execute("create table {}".format(RATELIMIT_TAB)
+                      + " (name text, last text)")
+
+            # and add an entry for this plugin
+            c.execute("insert into {}".format(RATELIMIT_TAB)
+                      + " values ('alarm', '2001-01-01 00:00:00.000')")
+        else:
+            print("Encountered miscellaneous sqlite error:", e)
+
+    conn.commit()
+    conn.close()
+
     alarm = HackerspaceLink(bot)
 
