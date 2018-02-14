@@ -34,8 +34,9 @@ def register_to(bot):
         }
         rbrackets = { v : k for k, v in brackets.items() }  # reversed mapping
 
-        smileys = [':(', ':\'(', ':-(', '<3', '+o(', ':\'-(', ';(', ';-(',
-                   '>.<', '>.>', '<.<' ':<', ':-<', '(:', ';)', ';-)']
+        smileys = [':-((', ':((', ':(', ':\'(', ':-(', '<3', '+o(', ':\'-(',
+                   ';(', ';-(', '>.<', '>.>', '<.<' ':<', ':-<', '(:', ';)',
+                   ';-)', '<--']
 
         result = []     # List of missing brackets, reported to chatroom
         stack = []      # Temporary stack of bracket counterparts
