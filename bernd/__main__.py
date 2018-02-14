@@ -83,6 +83,7 @@ def main():
                 # Provide every module with a set of relevant environment vars
                 module.DB_PATH = 'bernd.db'     # relative path to the sqlite3-dtb
                 module.COUNTER_TAB = 'counters' # Name of counter table in database
+                module.RATELIMIT_TAB = 'ratelimit' # Name of ratelimit table in database
                 module.TRUSTED_ROOMS = rooms    # Trusted rooms to join
                 module.CONFIG_USER = username   # Username, read from config file
                 module.CONFIG_SERVER = server   # Server, read from config file
