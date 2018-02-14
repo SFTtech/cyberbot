@@ -13,7 +13,7 @@ def register_to(bot):
         args = event['content']['body'].split()
 
         s = args[1]
-        i = randint(3,9)
+        i = randint(3,5)
         
         while (i > 0):
             s += choice(oop_names)
