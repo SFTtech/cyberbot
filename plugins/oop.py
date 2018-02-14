@@ -5,7 +5,9 @@ from random import choice, randint
 HELP_DESC = "!oop\t\t\t\t\t\t-\tTurns your argument into a class."
 
 def register_to(bot):
-    oop_names = ['Factory', 'Manager', 'Handler', 'Class', 'Object', 'Producer', 'Actor', 'Mirror']
+    oop_names = ['Factory', 'Manager', 'Handler', 'Class', 'Object', 'Producer',
+                 'Actor', 'Mirror', 'Generator', 'Observer', 'Bean',
+                 'Notification', 'Watcher']
 
     def oop_callback(room, event):
         args = event['content']['body'].split()
@@ -17,7 +19,7 @@ def register_to(bot):
             s += choice(oop_names)
             i -= 1
 
-        room.send_text('class ' + s)
+        room.send_text('`class ' + s + '`')
 
     oop_handler = MCommandHandler("oop", oop_callback)
     bot.add_handler(oop_handler)
