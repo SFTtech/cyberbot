@@ -1,6 +1,8 @@
 from matrix_bot_api.mcommand_handler import MCommandHandler
 
 import requests
+import datetime
+import sqlite3
 
 
 HELP_DESC = ("!cage\t\t\t\t\t\t-\tDisplays an image of the greatest actor of all times.")
@@ -11,6 +13,26 @@ download_url = 'https://www.placecage.com/'
 
 def register_to(bot):    
     def cage_callback(room, event):
+
+        # rate limiting
+        date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+        
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("select last from {}".format(RATELIMIT_TAB)
+                  + " where name = 'cage'")
+        lastdate = c.fetchall()[0][0]
+        
+        ### todo(stefan.huber@stusta.de):
+        if (date-lastdate) > 60mim:
+            c.execute("update {}".format(COUNTER_TAB)
+                  + " set counter=counter+1 where name = 'industrie'")
+
+        
+        conn.close()
+
+
+        # actual cage code
         args = event['content']['body'].split()
         # remove the command
         args.pop(0)
@@ -30,6 +52,35 @@ def register_to(bot):
             room.send_image(uri, 'Hübschlon')
         else:
             room.send_text('Cage ' + download_url + ' unavailable :( ')
+
+    conn = sqlite.connect(DB_PATH)
+    c = conn.cursor()
+
+    try:
+        # look if there is an entry for this plugin
+        c.execute("select name from {}".format(RATELIMIT_TAB)
+                  + " where name = 'cage'")
+
+        # if not, create one
+        if (c.fetchall() == []):
+            c.execute("insert into {}".format(RATELIMIT_TAB)
+                      + " values ('cage', '2001-01-01 00:00:00.000')")
+
+    except sqlite3.OperationalError as e:
+        # if the table does not exist
+        if (e.args[0].find('no such table') != -1):
+            # create it
+            c.execute("create table {}".format(RATELIMIT_TAB)
+                      + " (name text, last text)")
+
+            # and add an entry for this plugin
+            c.execute("insert into {}".format(RATELIMIT_TAB)
+                      + " values ('cage', '2001-01-01 00:00:00.000')")
+        else:
+            print("Encountered miscellaneous sqlite error:", e)
+
+    conn.commit()
+    conn.close()
 
     cage_handler = MCommandHandler("cage", cage_callback)
     bot.add_handler(cage_handler)
