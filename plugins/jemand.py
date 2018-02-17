@@ -30,13 +30,14 @@ def register_to(bot):
         # save the task to the database
         conn = sqlite3.connect(DB_PATH)
         curs = conn.cursor()
-        curs.execute("insert into" + TABLE_NAME + "(?)", msg)
+        curs.execute("insert into " + TABLE_NAME + " values ('{}')".format(msg))
         conn.commit()
         conn.close()
 
         members = room.get_joined_members()
         jemand = random.choice(list(members))
-        msg = msg.replace("jemand™", jemand.user_id)
+        #msg = msg.replace("jemand™", jemand.user_id)
+        msg = msg.replace("jemand™", jemand)
         room.send_text(msg)
 
 
@@ -47,15 +48,15 @@ def register_to(bot):
         conn = sqlite3.connect(DB_PATH)
         curs = conn.cursor()
         results = curs.execute("select task from {}".format(TABLE_NAME))
-        conn.commit()
-        conn.close()
 
-        msg = ""
+        msg = "Open Tasks:"
         for result in results:
-            msg = msg + result + "\n"
+            msg = "\n" + msg + result[0]
 
         room.send_text(msg)
 
+        conn.commit()
+        conn.close()
 
     conn = sqlite3.connect(DB_PATH)
     curs = conn.cursor()
