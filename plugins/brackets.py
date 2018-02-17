@@ -48,7 +48,7 @@ def register_to(bot):
             message = message.replace(smiley, '')
 
         # remove backticked source
-        message = re.sub(r'```[^`]*```|`[^`]*`', '', string)
+        message = re.sub(r'```[^`]*```|`[^`]*`', '', message)
 
         # Process filtered message for possible missing closed brackets
         for character in message:
