@@ -1,4 +1,5 @@
 from matrix_bot_api.mregex_handler import MRegexHandler
+import re
 
 HELP_DESC = '(automatic)\t\tThe bot closes opened brackets without a counterpart'
 
@@ -45,6 +46,9 @@ def register_to(bot):
         # Remove smileys from calculation
         for smiley in smileys:
             message = message.replace(smiley, '')
+
+        # remove backticked source
+        message = re.sub(r'```[^`]*```|`[^`]*`', '', string)
 
         # Process filtered message for possible missing closed brackets
         for character in message:
