@@ -2,9 +2,8 @@ from matrix_bot_api.mcommand_handler import MCommandHandler
 import urllib.request
 import urllib.parse
 import json
-from datetime import datetime
 import requests
-import datetime
+from datetime import datetime
 import sqlite3
 
 
@@ -52,15 +51,15 @@ def register_to(bot):
 
         # rate limiting
         formatstring = '%Y-%m-%d %H:%M:%S.%f'
-        now = datetime.datetime.now()
+        now = datetime.now()
         nowstr = now.strftime(formatstring)[:-3]
-        
+
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("select last from {}".format(RATELIMIT_TAB)
                   + " where name = 'pot'")
         laststr = c.fetchall()[0][0]
-        last = laststr.strftime(formatstring)
+        last = datetime.strptime(laststr, formatstring)
         diff = now - last
         diff = diff.seconds
 
@@ -70,7 +69,7 @@ def register_to(bot):
             return
 
         c.execute("update {}".format(RATELIMIT_TAB)
-                  + " set last={} where name = 'pot'".format(date))
+                  + " set last='{}' where name = 'pot'".format(nowstr))
         conn.commit()
         conn.close()
 
@@ -131,7 +130,7 @@ def register_to(bot):
         #send information text
         room.send_html(strToSend)
 
-    conn = sqlite.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
     try:

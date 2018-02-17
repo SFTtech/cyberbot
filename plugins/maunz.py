@@ -15,18 +15,18 @@ download_url = 'https://loremflickr.com/'
 
 def register_to(bot):
     def maunz_callback(room, event):
-        
+
         # rate limiting
         formatstring = '%Y-%m-%d %H:%M:%S.%f'
         now = datetime.datetime.now()
         nowstr = now.strftime(formatstring)[:-3]
-        
+
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("select last from {}".format(RATELIMIT_TAB)
                   + " where name = 'maunz'")
         laststr = c.fetchall()[0][0]
-        last = laststr.strftime(formatstring)
+        last = datetime.datetime.strptime(laststr, formatstring)
         diff = now - last
         diff = diff.seconds
 
@@ -36,7 +36,7 @@ def register_to(bot):
             return
 
         c.execute("update {}".format(RATELIMIT_TAB)
-                  + " set last={} where name = 'maunz'".format(date))
+                  + " set last='{}' where name = 'maunz'".format(nowstr))
         conn.commit()
         conn.close()
 
@@ -62,7 +62,7 @@ def register_to(bot):
         else:
             room.send_text('Kittens ' + download_url + ' unavailable :( ')
 
-    conn = sqlite.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
     try:

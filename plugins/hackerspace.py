@@ -3,11 +3,13 @@ from matrix_bot_api.mcommand_handler import MCommandHandler
 import json
 import ssl
 import socket
+import sqlite3
+import datetime
 
 HELP_DESC = ("!alarm\t\t\t\t\t\t-\tFlash the signal light in the Hackerspace\n"
              "!devices\t\t\t\t\t\t-\tShow # of connected ETH devices in space")
 
-ALARM_RATELIMIT = 900 # 60 seconds * 15 Minutes
+ALARM_RATELIMIT = 60 # 60 seconds
 
 class HackerspaceLink:
     hauptbahnhof_port = 1337
@@ -113,13 +115,13 @@ class HackerspaceLink:
         formatstring = '%Y-%m-%d %H:%M:%S.%f'
         now = datetime.datetime.now()
         nowstr = now.strftime(formatstring)[:-3]
-        
+
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("select last from {}".format(RATELIMIT_TAB)
                   + " where name = 'alarm'")
         laststr = c.fetchall()[0][0]
-        last = laststr.strftime(formatstring)
+        last = datetime.datetime.strptime(laststr, formatstring)
         diff = now - last
         diff = diff.seconds
 
@@ -129,7 +131,7 @@ class HackerspaceLink:
             return
 
         c.execute("update {}".format(RATELIMIT_TAB)
-                  + " set last={} where name = 'alarm'".format(date))
+                  + " set last='{}' where name = 'alarm'".format(nowstr))
         conn.commit()
         conn.close()
 
@@ -157,8 +159,8 @@ class HackerspaceLink:
         # If the receive command failed, error is already printed -> do nothing
 
 def register_to(bot):
-    
-    conn = sqlite.connect(DB_PATH)
+
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
     try:
