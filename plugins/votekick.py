@@ -185,7 +185,8 @@ def register_to(bot):
 
         # start a timer thread to wait for the vote to end
         t = threading.Thread(target=vote_wait,
-                             args = (room,event,user,reason,initiator))
+                             args = (room,event,user,reason,initiator),
+                             daemon=True)
         t.start()
 
     # called upon +1/-1 commands

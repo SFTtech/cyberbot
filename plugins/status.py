@@ -24,7 +24,7 @@ class StatusWatch:
             return None
 
         # start polling
-        self.thread = Thread(target=self.start_listening)
+        self.thread = Thread(target=self.start_listening, daemon=True)
         self.thread.start()
 
     def __del__(self):

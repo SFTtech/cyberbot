@@ -62,7 +62,7 @@ class RoomDefender:
             room.send_text(warn)
 
             t = threading.Thread(target=self.ban_wait,
-                                 args=(room, event, suspect))
+                                 args=(room, event, suspect), daemon=True)
             t.start()
 
     def nope_callback(self, room, event):

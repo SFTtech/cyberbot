@@ -11,7 +11,7 @@ class RSSGitlabFeed:
     def __init__(self, bot):
         self.bot = bot
         self.dbmfile = "feed_read.dbm"
-        self.thread = Thread(target=self.start)
+        self.thread = Thread(target=self.start, daemon=True)
         self.thread.start()
 
     def start(self):
