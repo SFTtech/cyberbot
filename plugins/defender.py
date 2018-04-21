@@ -43,7 +43,7 @@ class RoomDefender:
                 self.spam_suspects.pop(i)
 
 
-    def def_callback(self, room, event):
+    def def_callback(self, room, event, data):
         suspect = event['sender']
 
         if (suspect not in [s[0] for s in self.spam_suspects]):
@@ -65,7 +65,7 @@ class RoomDefender:
                                  args=(room, event, suspect), daemon=True)
             t.start()
 
-    def nope_callback(self, room, event):
+    def nope_callback(self, room, event, data):
         suspect = event['sender']
 
         for s in self.spam_suspects:

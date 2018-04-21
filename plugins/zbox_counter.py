@@ -7,7 +7,7 @@ HELP_DESC = "!zbox++\t\t\t\t\t\t-\tCount the number of zboxes required\n"\
 
 def register_to(bot):
 
-    def zbox_counter(room, event):
+    def zbox_counter(room, event, data):
         # ignore, if this feature is requested in a private room
         if (event['room_id'] not in TRUSTED_ROOMS):
             room.send_text("This feature is not available in this room")
@@ -21,7 +21,7 @@ def register_to(bot):
         conn.commit()
 
 
-    def get_counter(room, event):
+    def get_counter(room, event, data):
         """ Give the current counter """
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
@@ -40,7 +40,7 @@ def register_to(bot):
 
 
 
-    def reset_counter(room, event):
+    def reset_counter(room, event, data):
         """ set the counter to 0 """
         # ignore, if this feature is requested in a private room
         if (event['room_id'] not in TRUSTED_ROOMS):

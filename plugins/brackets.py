@@ -13,7 +13,7 @@ def register_to(bot):
     placement.
     """
 
-    def bracket_callback(room, event):
+    def bracket_callback(room, event, data):
         brackets = {
             '(': ')', '[': ']', '{': '}', '<': '>',
             '„': '“',

@@ -43,7 +43,7 @@ def register_to(bot):
         for u in room_users:
             if (target_user in u.user_id):
                 return u
-        
+
         room.send_text("No matching user \'{}\' ".format(target_user) +
                        "has been found. Aborting")
         return None
@@ -144,7 +144,7 @@ def register_to(bot):
         VOTE_IN_PROGRESS = False
 
     # executed upon !votekick command
-    def kick_callback(room, event):
+    def kick_callback(room, event, data):
         global VOTE_TIME
         global VOTE_IN_PROGRESS
         global VOTE_COUNT
@@ -190,7 +190,7 @@ def register_to(bot):
         t.start()
 
     # called upon +1/-1 commands
-    def vote_callback(room, event):
+    def vote_callback(room, event, data):
         global VOTE_IN_PROGRESS
         global VOTE_COUNT
         global VOTE_BALANCE

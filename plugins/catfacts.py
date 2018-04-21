@@ -151,11 +151,11 @@ def register_to(bot):
         html_fact = "<pre><code>" + formatted_fact + "</code></pre>\n"
         return fact, html_fact
 
-    def fact_callback(room, event):
+    def fact_callback(room, event, data):
         fact, html_fact = generate_catfact()
         room.send_html(html_fact, fact)
 
-    def calm_callback(room, event):
+    def calm_callback(room, event, data):
 
         opening = "Hey, {}!\n".format(event['sender'])
         opening += random.choice(calm_openings)

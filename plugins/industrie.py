@@ -5,7 +5,7 @@ HELP_DESC = "!industrie++\t\t\t\t\t-\tHeralds the dawn of a new industrial era"
 
 def register_to(bot):
 
-    def industry_callback(room, event):
+    def industry_callback(room, event, data):
 
         # ignore, if this feature is requested in a private room
         if (event['room_id'] not in TRUSTED_ROOMS):

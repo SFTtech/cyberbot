@@ -72,7 +72,7 @@ class HackerspaceLink:
         return jsn
 
 
-    def dev_callback(self, room, event):
+    def dev_callback(self, room, event, data):
 
         # ignore, if this feature is requested in a private room
         if (event['room_id'] not in TRUSTED_ROOMS):
@@ -104,7 +104,7 @@ class HackerspaceLink:
         # If the receive command failed, error is already printed -> do nothing
 
 
-    def alarm_callback(self, room, event):
+    def alarm_callback(self, room, event, data):
 
         # ignore, if this feature is requested in a private room
         if (event['room_id'] not in TRUSTED_ROOMS):

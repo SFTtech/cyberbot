@@ -21,7 +21,7 @@ def register_to(bot):
     """
     cage_callback() is called whenever someone posts !cage in the chat
     """
-    def cage_callback(room, event):
+    def cage_callback(room, event, data):
 
         # rate limiting
         formatstring = '%Y-%m-%d %H:%M:%S.%f'

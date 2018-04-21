@@ -11,7 +11,7 @@ def register_to(bot):
                      'greetings', 'yo', 'howdy', 'hiya']
 
     # Somebody said hi, let's say Hi back
-    def hi_callback(room, event):
+    def hi_callback(room, event, data):
         if (event['sender'] == '@bernd:stusta.de'):
             greeting = choice(greetings)
             emoji = choice(emojis)

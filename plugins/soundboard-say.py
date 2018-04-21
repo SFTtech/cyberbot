@@ -5,7 +5,7 @@ import re
 HELP_DESC = ("!say\t\t\t\t\t\t\t-\tMake the soundboard say something")
 
 def register_to(bot):
-    def say_callback(room, event):
+    def say_callback(room, event, data):
         args = event['content']['body'].split()[1:]
 
         # prefix the phrase with [de] or [en] to use the

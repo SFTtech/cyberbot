@@ -6,14 +6,14 @@ HELP_DESC = ("!echo\t\t\t\t\t\t-\tEcho back the given string\n"
 def register_to(bot):
 
     # Echo back the given command
-    def echo_callback(room, event):
+    def echo_callback(room, event, data):
         args = event['content']['body'].split()
         args.pop(0)
 
         room.send_text(event['sender'] + ': ' + ' '.join(args))
 
     # Highlight all room members
-    def all_callback(room, event):
+    def all_callback(room, event, data):
         memb = room.get_joined_members()
         memb_names = []
         args = event['content']['body'].split()

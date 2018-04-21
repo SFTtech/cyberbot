@@ -9,12 +9,12 @@ def register_to(bot):
                  'Actor', 'Mirror', 'Generator', 'Observer', 'Bean',
                  'Notification', 'Watcher']
 
-    def oop_callback(room, event):
+    def oop_callback(room, event, data):
         args = event['content']['body'].split()
 
         s = args[1]
         i = randint(3,5)
-        
+
         while (i > 0):
             s += choice(oop_names)
             i -= 1

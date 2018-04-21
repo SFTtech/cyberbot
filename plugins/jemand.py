@@ -7,7 +7,7 @@ HELP_DESC = ("(automatic)\t\tThe bot replaces 'jemand™' in a sentence with a "
 def register_to(bot):
 
     # Echo back the given command
-    def jemand_callback(room, event):
+    def jemand_callback(room, event, data):
         members = room.get_joined_members()
         jemand = random.choice(list(members))
         msg = event['content']['body']

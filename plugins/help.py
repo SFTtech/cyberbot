@@ -9,7 +9,7 @@ def register_to(bot):
     except FileNotFoundError:
         help_txt = ""
 
-    def help_callback(room, event):
+    def help_callback(room, event, data):
         room.send_text(help_txt)
 
     help_handler = MCommandHandler("help", help_callback)

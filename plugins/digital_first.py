@@ -17,7 +17,7 @@ def register_to(bot):
         else:
             return str(n)+"th"
 
-    def digital_callback(room, event):
+    def digital_callback(room, event, data):
 
         # ignore, if this feature is requested in a private room
         if (event['room_id'] not in TRUSTED_ROOMS):

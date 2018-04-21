@@ -6,7 +6,7 @@ HELP_DESC = "(automatic)\t\tThe bot will greet back people, posting salutations"
 def register_to(bot):
 
     # Somebody said hi, let's say Hi back
-    def hi_callback(room, event):
+    def hi_callback(room, event, data):
         greetings = ['hey', 'hi', 'ohai', 'heyho', 'cheerio', 'wazzuuuuuup',
                      'greetings', 'yo', 'howdy', 'hiya']
         jabberings = ['how are ya?', 'how\'s it going?', 'how\'s life?',
