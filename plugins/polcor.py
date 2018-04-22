@@ -115,6 +115,10 @@ class PoliticalCorrectness:
                            + "[a-z]äöüß[A-Z]ÄÖÜ.")
             return
 
+        if word == correct_word:
+            room.send_text("Corrections are only accepted for differing words.")
+            return
+
         # try to insert the given handle into the correctness database
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
