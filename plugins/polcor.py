@@ -90,12 +90,10 @@ class PoliticalCorrectness:
         word = ""
         correct_word = ""
 
-        '''
         # ignore, if this feature is requested in a private room
         if (event['room_id'] not in TRUSTED_ROOMS):
             room.send_text("This feature is not available in this room")
             return
-        '''
 
         # parse arguments
         args = event['content']['body'].split()
