@@ -2,7 +2,7 @@ from matrix_bot_api.mcommand_handler import MCommandHandler
 import requests
 import re
 
-HELP_DESC = ("!say\t\t\t\t\t\t\t-\tMake the soundboard say something")
+HELP_DESC = ("!say\t\t\t-\tMake the soundboard say something")
 
 def register_to(bot):
     def say_callback(room, event, data):

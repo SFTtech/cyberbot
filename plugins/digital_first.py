@@ -1,7 +1,7 @@
 import sqlite3
 from matrix_bot_api.mcommand_handler import MCommandHandler
 
-HELP_DESC = ("!digital++\t\t\t\t\t-\tIncrease the digitalization counter"
+HELP_DESC = ("!digital++\t\t-\tIncrease the digitalization counter"
              " (Lindner Style)")
 
 def register_to(bot):

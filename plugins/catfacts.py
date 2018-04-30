@@ -114,7 +114,7 @@ calm_openings = [
     'Did you know that Tribbles (Polygeminus grex) from the Star Trek universe emit cooing sounds while touched, which have a tranquilizing effect on the human nervous system? Maybe this also works with catfacts. Take it and shut up.'
 ]
 
-HELP_DESC = ("!catfact\t\t\t\t\t\t-\tPrint an informative catfact\n"
+HELP_DESC = ("!catfact\t\t-\tPrint an informative catfact\n"
              "(automatic)\t\tThe bot prints soothing facts to calm down angry minds")
 
 def register_to(bot):

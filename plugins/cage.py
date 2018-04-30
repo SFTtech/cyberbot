@@ -8,7 +8,7 @@ import requests
 
 from matrix_bot_api.mcommand_handler import MCommandHandler
 
-HELP_DESC = ("!cage\t\t\t\t\t\t-\tDisplays an image of the greatest actor of all times.")
+HELP_DESC = ("!cage\t\t\t-\tDisplays an image of the greatest actor of all times.")
 UPLOAD_URL = 'https://matrix.org/_matrix/media/r0/upload'
 DOWNLOAD_URL = 'https://www.placecage.com/'
 RATELIMIT = 3600 # 60 seconds * 60 minutes = 1 hour

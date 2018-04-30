@@ -7,7 +7,7 @@ from datetime import datetime
 import sqlite3
 
 
-HELP_DESC = ("!pot\t\t\t\t\t\t\t-\tDisplays the current meal at Pot.")
+HELP_DESC = ("!pot\t\t\t-\tDisplays the current meal at Pot.")
 
 #pot url
 link = "https://pot.stusta.de/plan.json"

@@ -4,7 +4,7 @@ import requests
 from random import choice
 
 
-HELP_DESC = ("!pokemon\t\t\t\t\t-\tRetrieves the name of a pokemon by its number")
+HELP_DESC = ("!pokemon\t\t-\tRetrieves the name of a pokemon by its number")
 
 download_url = 'http://pokeapi.co/api/v2/pokemon/'
 

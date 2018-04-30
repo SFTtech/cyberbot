@@ -1,9 +1,9 @@
 import sqlite3
 from matrix_bot_api.mcommand_handler import MCommandHandler
 
-HELP_DESC = "!zbox++\t\t\t\t\t\t-\tCount the number of zboxes required\n"\
-            "!zbox\t\t\t\t\t\t-\tShow how many zboxes need to be bought\n"\
-            "!0box\t\t\t\t\t\t-\tReset zbox counter after you bought something\n"\
+HELP_DESC = "!zbox++\t\t\t-\tCount the number of zboxes required\n"\
+            "!zbox\t\t\t-\tShow how many zboxes need to be bought\n"\
+            "!0box\t\t\t-\tReset zbox counter after you bought something\n"\
 
 def register_to(bot):
 

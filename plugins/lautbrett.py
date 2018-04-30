@@ -1,7 +1,7 @@
 from matrix_bot_api.mcommand_handler import MCommandHandler
 import requests
 
-HELP_DESC = ("!laut\t\t\t\t\t\t-\tPlay something on the lautbrett")
+HELP_DESC = ("!laut\t\t\t-\tPlay something on the lautbrett")
 
 
 def register_to(bot):

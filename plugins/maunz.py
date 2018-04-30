@@ -7,7 +7,7 @@ import sqlite3
 maunz_ratelimit = 900 # 60 seconds * 15 minutes
 
 
-HELP_DESC = ("!maunz\t\t\t\t\t\t-\tDisplays cute kittens from loremflickr")
+HELP_DESC = ("!maunz\t\t\t-\tDisplays cute kittens from loremflickr")
 
 upload_url = 'https://matrix.org/_matrix/media/r0/upload'
 

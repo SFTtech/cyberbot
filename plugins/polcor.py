@@ -3,8 +3,8 @@ import string
 from matrix_bot_api.mcommand_handler import MCommandHandler
 from matrix_bot_api.mregex_handler import MRegexHandler
 
-HELP_DESC = ("!correct FROM TO\t\t\t-\tAdd a new political correction handler\n"
-             "!incorrect FROM\t\t\t\t-\tRemove given political correction handler\n")
+HELP_DESC = ("!correct FROM TO\t-\tAdd a new political correction handler\n"
+             "!incorrect FROM\t\t-\tRemove given political correction handler\n")
 
 
 class PoliticalCorrectness:

@@ -1,7 +1,7 @@
 from matrix_bot_api.mcommand_handler import MCommandHandler
 
-HELP_DESC = ("!echo\t\t\t\t\t\t-\tEcho back the given string\n"
-             "!all\t\t\t\t\t\t\t-\tHighlight all people in the channel")
+HELP_DESC = ("!echo\t\t\t-\tEcho back the given string\n"
+             "!all\t\t\t-\tHighlight all people in the channel")
 
 def register_to(bot):
 

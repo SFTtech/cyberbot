@@ -3,7 +3,7 @@ import threading
 from matrix_bot_api.mcommand_handler import MCommandHandler
 from matrix_bot_api.mregex_handler import MRegexHandler
 
-HELP_DESC = ("!votekick <user> [<reason>]\t"
+HELP_DESC = ("!votekick USER REASON\t"
              "-\tStart a vote to kick the specified user")
 VOTE_TIME = 30              # Amount seconds a vote takes
 VOTE_IN_PROGRESS = False    # Mutex to prevent multiple parallel votes

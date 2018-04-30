@@ -1,7 +1,7 @@
 import sqlite3
 from matrix_bot_api.mcommand_handler import MCommandHandler
 
-HELP_DESC = "!industrie++\t\t\t\t\t-\tHeralds the dawn of a new industrial era"
+HELP_DESC = "!industrie++\t\t-\tHeralds the dawn of a new industrial era"
 
 def register_to(bot):
 

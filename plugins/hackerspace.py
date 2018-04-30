@@ -6,8 +6,8 @@ import socket
 import sqlite3
 import datetime
 
-HELP_DESC = ("!alarm\t\t\t\t\t\t-\tFlash the signal light in the Hackerspace\n"
-             "!devices\t\t\t\t\t\t-\tShow # of connected ETH devices in space")
+HELP_DESC = ("!alarm\t\t\t-\tFlash the signal light in the Hackerspace\n"
+             "!devices\t\t-\tShow # of connected ETH devices in space")
 
 ALARM_RATELIMIT = 60 # 60 seconds
 
