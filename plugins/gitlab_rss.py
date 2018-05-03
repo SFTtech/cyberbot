@@ -23,7 +23,7 @@ class RSSGitlabFeed:
                 feed = feedparser.parse('https://gitlab.stusta.de/stustanet.atom?rss_token=bDpY1CXCHk2RDgivMGWs')
                 self.update_from_feed(feed)
             finally:
-                time.sleep(1)
+                time.sleep(60)
 
     def update_from_feed(self, feed):
         """
