@@ -47,7 +47,29 @@ class PoliticalCorrectness:
     def generic_correction_callback(self, room, event, data):
         word = data[0]
         corrected_word = data[1]
-        msg = event['content']['body'].replace(word, corrected_word)
+
+        # Handling of sicher -> sicher™
+        # normally we would need char-wise pattern enlargement to each side, but
+        # the following works in most of the cases, so... --suhu
+        if word in corrected_word:
+            msg = event['content']['body']
+            # Bernd can only correct single words, so we can check each word
+            words = msg.split(' ')
+            for i in range(len(words)):
+                word_test = words[i]
+                if corrected_word in word_test:
+                    continue
+                if word in word_test:
+                    words[i] = word_test.replace(word, corrected_word)
+            msg_new = " ".join(words)
+
+            if msg == msg_new:
+                return
+            else:
+                msg = msg_new
+
+        else:
+            msg = event['content']['body'].replace(word, corrected_word)
 
         text = str(event['sender'] + ': '
                    + "Bei '{}' handelt es sich um Hasssprech.".format(word)
