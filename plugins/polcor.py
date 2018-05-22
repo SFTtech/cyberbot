@@ -48,28 +48,30 @@ class PoliticalCorrectness:
         word = data[0]
         corrected_word = data[1]
 
-        # Handling of sicher -> sicher™
-        # normally we would need char-wise pattern enlargement to each side, but
-        # the following works in most of the cases, so... --suhu
-        if word in corrected_word:
-            msg = event['content']['body']
-            # Bernd can only correct single words, so we can check each word
-            words = msg.split(' ')
-            for i in range(len(words)):
-                word_test = words[i]
+        msg = event['content']['body']
+        # Bernd can only correct single words, so we can check each word
+        words = msg.split(' ')
+        for i, word_test in enumerate(words):
+            if word in word_test:
+                # Handling of sicher -> sicher™
+                # normally we would need char-wise pattern enlargement to each side,
+                # but the following works in most of the cases, so... --suhu
                 if corrected_word in word_test:
                     continue
-                if word in word_test:
-                    words[i] = word_test.replace(word, corrected_word)
-            msg_new = " ".join(words)
+                # exclude links
+                if word_test.startswith("http"):
+                    continue
+                if word_test.startswith("www."):
+                    continue
+                # handling the replacement
+                words[i] = word_test.replace(word, corrected_word)
 
-            if msg == msg_new:
-                return
-            else:
-                msg = msg_new
+        msg_new = " ".join(words)
 
+        if msg == msg_new:
+            return
         else:
-            msg = event['content']['body'].replace(word, corrected_word)
+            msg = msg_new
 
         text = str(event['sender'] + ': '
                    + "Bei '{}' handelt es sich um Hasssprech.".format(word)
