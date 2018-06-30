@@ -79,7 +79,7 @@ class PoliticalCorrectness:
                    + " Die politisch korrekte Aussage wäre:\n\n\""
                    + msg + "\"")
 
-        room.send_text(text)
+        #room.send_text(text)
 
     def incorrect_callback(self, room, event, data):
         args = event['content']['body'].split()
