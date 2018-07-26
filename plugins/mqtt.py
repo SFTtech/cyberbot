@@ -84,9 +84,7 @@ class MQTTBahnhofClient:
 
     def start(self):
         """ Connect and start the mqtt machine """
-
-        # *_srv is needed when we connect to a DNS instead of an IP
-        self.mqtt.connect_srv(self.host, port=8883)
+        self.mqtt.connect(self.host, port=8883)
         self.log.info("Successfully connected to %s", self.host)
 
         # Spinning of a thread for the magic
@@ -146,7 +144,7 @@ class HackerspaceHandler:
             # We do not generate more spam too an already spamming dude
             return
 
-        self.client.publish('/haspa/action', {'action':'alarm'})
+        self.client.publish('/haspa/action', json.dumps({'action':'alarm'}))
 
     def bot_party(self, room, event):
         """ !party - callback"""
@@ -156,7 +154,7 @@ class HackerspaceHandler:
         if self.is_ratelimited('party'):
             # We do not generate more spam too an already spamming dude
             return
-        self.client.publish('/haspa/action', {'action':'party'})
+        self.client.publish('/haspa/action', json.dumps({'action':'party'}))
 
     def bot_devices(self, room, event):
         """ !devices - callback """
@@ -174,7 +172,7 @@ class HackerspaceHandler:
 
         self.device_count_requested_time = time.time()
         self.device_count_room = room
-        self.client.publish('/haspa/nsa/scan', {'blacklist':'unknown'})
+        self.client.publish('/haspa/nsa/scan', json.dumps({'blacklist':'unknown'}))
 
     def bhf_haspastatus(self, client, userdata, mqttmsg):
         """ /haspa/status change detected """
@@ -194,7 +192,7 @@ class HackerspaceHandler:
     def bhf_count_devices(self, client, userdata, mqttmsg):
         """ /haspa/nsa/result message """
         del client, userdata
-        if self.device_count_requested_time != 0:
+        if self.device_count_requested_time == 0:
             print("we are not waiting for a device count - will not display!")
             return
 
