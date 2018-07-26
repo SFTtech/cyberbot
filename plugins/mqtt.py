@@ -85,7 +85,8 @@ class MQTTBahnhofClient:
     def start(self):
         """ Connect and start the mqtt machine """
 
-        self.mqtt.connect(self.host, port=8883)
+        # *_srv is needed when we connect to a DNS instead of an IP
+        self.mqtt.connect_srv(self.host, port=8883)
         self.log.info("Successfully connected to %s", self.host)
 
         # Spinning of a thread for the magic
@@ -103,6 +104,7 @@ class HackerspaceHandler:
 
         self.ratelimit = {
             'alarm':   {'rate': self.config['ratelimit']['alarm'], 'last': 0},
+            'party':   {'rate': self.config['ratelimit']['party'], 'last': 0},
             'devices': {'rate': self.config['ratelimit']['devices'], 'last': 0}
         }
 
@@ -111,6 +113,7 @@ class HackerspaceHandler:
 
         self.bot = bot
         self.bot.add_handler(MCommandHandler("alarm", self.bot_alarm))
+        self.bot.add_handler(MCommandHandler("party", self.bot_party))
         self.bot.add_handler(MCommandHandler("devices", self.bot_devices))
 
         self.client = MQTTBahnhofClient(self.config, {
@@ -134,9 +137,8 @@ class HackerspaceHandler:
             return False
         return True
 
-    def bot_alarm(self, room, event, data):
+    def bot_alarm(self, room, event):
         """ !alarm - callback"""
-        del data
         if event['room_id'] not in TRUSTED_ROOMS:
             room.send_text("This feature is not available in this room")
             return
@@ -146,9 +148,18 @@ class HackerspaceHandler:
 
         self.client.publish('/haspa/action', {'action':'alarm'})
 
-    def bot_devices(self, room, event, data):
+    def bot_party(self, room, event):
+        """ !party - callback"""
+        if event['room_id'] not in TRUSTED_ROOMS:
+            room.send_text("This feature is not available in this room")
+            return
+        if self.is_ratelimited('party'):
+            # We do not generate more spam too an already spamming dude
+            return
+        self.client.publish('/haspa/action', {'action':'party'})
+
+    def bot_devices(self, room, event):
         """ !devices - callback """
-        del data
         if event['room_id'] not in TRUSTED_ROOMS:
             room.send_text("This feature is not available in this room")
             return
