@@ -9,7 +9,7 @@ def register_to(bot):
                  'Actor', 'Mirror', 'Generator', 'Observer', 'Bean',
                  'Notification', 'Watcher']
 
-    def oop_callback(room, event, data):
+    def oop_callback(room, event):
         args = event['content']['body'].split()
 
         s = args[1]

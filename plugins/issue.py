@@ -6,7 +6,7 @@ HELP_DESC = ("!issue\t\t\t\t\t\t-\tThe bot will post a random open issue from th
 
 def register_to(bot):
 
-    def issue_callback(room, event, data):
+    def issue_callback(room, event):
 
         # get the online feed
         feed = feedparser.parse('https://gitlab.stusta.de/groups/stustanet/-/issues.atom?rss_token=yjcgz4jbZHsph-sL3tq1&state=opened')

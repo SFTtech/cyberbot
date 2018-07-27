@@ -13,7 +13,7 @@ def register_to(bot):
         html_text = "<pre><code>" + text + "</code></pre>\n"
         return html_text
 
-    def help_callback(room, event, data):
+    def help_callback(room, event):
         formatted_help = format_help(help_txt)
         room.send_html(formatted_help, help_txt)
 

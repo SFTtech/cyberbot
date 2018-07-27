@@ -7,7 +7,7 @@ HELP_DESC = ("!laut\t\t\t-\tPlay something on the lautbrett")
 def register_to(bot):
 
     # Echo back the given command
-    def laut_callback(room, event, data):
+    def laut_callback(room, event):
         args = event['content']['body'].split()
         args.pop(0)
         sound_id = args[0]

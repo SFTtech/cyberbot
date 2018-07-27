@@ -44,7 +44,7 @@ class PoliticalCorrectness:
         self.bot.add_handler(incorrect_handler)
 
 
-    def generic_correction_callback(self, room, event, data):
+    def generic_correction_callback(self, room, event):
         word = data[0]
         corrected_word = data[1]
 
@@ -81,7 +81,7 @@ class PoliticalCorrectness:
 
         #room.send_text(text)
 
-    def incorrect_callback(self, room, event, data):
+    def incorrect_callback(self, room, event):
         args = event['content']['body'].split()
         word = args[1]
 
@@ -109,7 +109,7 @@ class PoliticalCorrectness:
         conn.close()
         room.send_text("Removed the given correction from the database.")
 
-    def correct_callback(self, room, event, data):
+    def correct_callback(self, room, event):
 
         word = ""
         correct_word = ""

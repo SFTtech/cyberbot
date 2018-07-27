@@ -47,7 +47,7 @@ def getDate(args, room):
 
 
 def register_to(bot):
-    def pot_handler(room, event, data):
+    def pot_handler(room, event):
 
         # rate limiting
         formatstring = '%Y-%m-%d %H:%M:%S.%f'

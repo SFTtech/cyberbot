@@ -12,7 +12,7 @@ download_url = 'http://pokeapi.co/api/v2/pokemon/'
 insults = ['mac using faggot', 'millenial', 'blazingly fast web developer', 'Apple Macintosh employing non-cisgender male']
 
 def register_to(bot):
-    def pokemon_callback(room, event, data):
+    def pokemon_callback(room, event):
         args = event['content']['body'].split()
 
         if(len(args) < 2):

@@ -8,7 +8,7 @@ HELP_DESC = ("!{mvg,mvv} <minutes>\t\t-\tDisplay stusta depatures")
 def register_to(bot):
 
 
-    def mvg_callback(room, event, data):
+    def mvg_callback(room, event):
         args = event['content']['body'].split()
 
         m = MVGLive.MVGLive()

@@ -14,7 +14,7 @@ upload_url = 'https://matrix.org/_matrix/media/r0/upload'
 download_url = 'https://loremflickr.com/'
 
 def register_to(bot):
-    def maunz_callback(room, event, data):
+    def maunz_callback(room, event):
 
         # rate limiting
         formatstring = '%Y-%m-%d %H:%M:%S.%f'

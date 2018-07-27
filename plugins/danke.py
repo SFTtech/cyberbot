@@ -10,7 +10,7 @@ avowals = ["You're welcome!",
 def register_to(bot):
 
     # Echo back the given command
-    def danke_callback(room, event, data):
+    def danke_callback(room, event):
         args = event['content']['body'].split()
         args.pop(0)
 
