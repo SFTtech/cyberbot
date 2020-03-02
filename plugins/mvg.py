@@ -18,7 +18,7 @@ def register_to(bot):
         else:
             depJson = str(m.getlivedata(station="Garching-Forschungszentrum", entries = 5)).replace("'", '"')
         depObj = json.loads(depJson)
-        outText="Von StuSta:<br>"
+        outText="Vom Garching-Forschungszentrum:<br>"
 
         #Create the depature list
         for i in depObj:
