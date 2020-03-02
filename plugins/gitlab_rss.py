@@ -4,7 +4,7 @@ from threading import Thread
 import dbm.ndbm
 import time
 
-from rss_token import rss_token
+rss_token = ""
 
 HELP_DESC = ("(automatic)\t\t-The bot will post changes in rbg gitlab Cybergruppe Group")
 

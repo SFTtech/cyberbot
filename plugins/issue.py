@@ -2,7 +2,7 @@ from matrix_bot_api.mcommand_handler import MCommandHandler
 import feedparser
 from random import choice
 
-from rss_token import rss_token
+rss_token = ""
 
 HELP_DESC = ("!issue\t\t\t\t\t\t-\tThe bot will post a random open issue from the cyber group")
 
