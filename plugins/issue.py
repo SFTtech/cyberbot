@@ -2,14 +2,16 @@ from matrix_bot_api.mcommand_handler import MCommandHandler
 import feedparser
 from random import choice
 
-HELP_DESC = ("!issue\t\t\t\t\t\t-\tThe bot will post a random open issue from the stustanet group")
+from rss_token import rss_token
+
+HELP_DESC = ("!issue\t\t\t\t\t\t-\tThe bot will post a random open issue from the cyber group")
 
 def register_to(bot):
 
     def issue_callback(room, event):
 
         # get the online feed
-        feed = feedparser.parse('https://gitlab.stusta.de/groups/stustanet/-/issues.atom?rss_token=yjcgz4jbZHsph-sL3tq1&state=opened')
+        feed = feedparser.parse(f'https://gitlab.rbg.de/groups/cyber/-/issues.atom?rss_token={rss_token}&state=opened')
 
         # choose one isse randomly
         issue = choice(feed['entries'])

@@ -14,9 +14,9 @@ def register_to(bot):
         m = MVGLive.MVGLive()
         #offest wurde als argument übergeben
         if len(args)>1:
-            depJson = str(m.getlivedata(station="Studentenstadt", entries=5, timeoffset=int(args[1]))).replace("'", '"')
+            depJson = str(m.getlivedata(station="Garching-Forschungszentrum", entries=5, timeoffset=int(args[1]))).replace("'", '"')
         else:
-            depJson = str(m.getlivedata(station="Studentenstadt", entries = 5)).replace("'", '"')
+            depJson = str(m.getlivedata(station="Garching-Forschungszentrum", entries = 5)).replace("'", '"')
         depObj = json.loads(depJson)
         outText="Von StuSta:<br>"
 

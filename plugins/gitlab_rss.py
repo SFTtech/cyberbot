@@ -4,7 +4,9 @@ from threading import Thread
 import dbm.ndbm
 import time
 
-HELP_DESC = ("(automatic)\t\t-The bot will post changes in stustanet gitlab")
+from rss_token import rss_token
+
+HELP_DESC = ("(automatic)\t\t-The bot will post changes in rbg gitlab Cybergruppe Group")
 
 class RSSGitlabFeed:
 
@@ -20,7 +22,7 @@ class RSSGitlabFeed:
     def check_for_changes(self):
         while True:
             try:
-                feed = feedparser.parse('https://gitlab.stusta.de/stustanet.atom?rss_token=bDpY1CXCHk2RDgivMGWs')
+                feed = feedparser.parse(f'https://gitlab.rbg.tum.de/cyber.atom?feed_token={rss_token}')
                 self.update_from_feed(feed)
             finally:
                 time.sleep(60)
@@ -44,7 +46,7 @@ class RSSGitlabFeed:
         # Censor the link that is going to be displayed, if it contains the
         # RSS token - this is a horrible workaround for gitlab
         if ".atom?rss_token=" in entry['link']:
-            entry['link'] = "https://gitlab.stusta.de/stustanet"
+            entry['link'] = "https://gitlab.rbg.de/cyber"
 
         for rid, r in self.bot.client.get_rooms().items():
             if rid in TRUSTED_ROOMS:
