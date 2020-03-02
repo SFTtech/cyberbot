@@ -1,11 +1,9 @@
-[![Bernd Lauert](bernd.jpg)](http://krautchan.net)
-==================================================
-
 **Bernd Lauert**
 ----------------
-A matrix chatbot, designed for the [*StuStaNet
+A matrix chatbot, originally designed for the [*StuStaNet
 e.V.*](http://vereinsanzeiger.stustanet.de/) administrator chatroom
 (#admins:stusta.de), written in python.
+Adopted for the RBG Cybergroup.
 
 **Requirements**:
 
