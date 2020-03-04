@@ -28,7 +28,33 @@ let
       doCheck = false;
     };
 
+    matrix-nio = with ps; buildPythonPackage rec {
+      pname = "matrix-nio";
+      version = "0.9.0";
+      propagatedBuildInputs = [
+        attrs
+        future
+        aiohttp
+        aiofiles
+        h11
+        h2
+        Logbook
+        jsonschema
+        unpaddedbase64
+        pycryptodome
+        atomicwrites
+        python-olm
+        peewee
+        cachetools
+      ];
+      src = fetchPypi {
+        inherit pname version;
+        sha256 = "5986df619b56803546cb969b436ae87f8d207a359f3597f3d8e4e2d86946dc53";
+      };
+    };
+
   in [
+    matrix-nio
     matrix-bot-api
     PyMVGLive
     feedparser
