@@ -3,7 +3,7 @@ from matrix_bot_api.mcommand_handler import MCommandHandler
 import MVGLive
 import json
 
-HELP_DESC = ("!{mvg,mvv} <minutes>\t\t-\tDisplay stusta depatures")
+HELP_DESC = ("!{mvg,mvv} <minutes>\t\t-\tDisplay Forschungszentrum depatures")
 
 def register_to(bot):
 
@@ -24,7 +24,7 @@ def register_to(bot):
         for i in depObj:
             outText+=i["product"] + " <strong>" + i["linename"] + "</strong>, Richtung <strong>" + i["destination"] + \
                      "</strong> in <strong>"+ str(int(i["time"])) + "</strong> "+ ("minute" if int(i["time"])<=1 else "minutes") +".<br>"
-        room.send_html(outText)
+        await room.send_html(outText)
 
     mvg_handler = MCommandHandler("mvg", mvg_callback)
     bot.add_handler(mvg_handler)
