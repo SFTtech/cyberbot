@@ -59,6 +59,7 @@ async def main():
     botname    = check_default("BOTNAME", DEFAULT_BOTNAME)
     pluginpath = check_default("PLUGINPATH", DEFAULT_PLUGINPATH)
     deviceid   = check_default("DEVICEID", DEFAULT_DEVICEID)
+    store_path = check_default("STOREPATH", "")
     adminusers = list(filter(lambda x: x.strip(), check_default("ADMINUSERS", "").split(';')))
 
 
@@ -66,7 +67,9 @@ async def main():
             username,password,server,
             botname=DEFAULT_BOTNAME,
             deviceid=deviceid,
-            adminusers=adminusers) as bot:
+            adminusers=adminusers,
+            store_path=store_path,
+            ) as bot:
         await bot.join_rooms(rooms)
         await bot.load_plugins(pluginpath)
         await bot.listen(exec_mode)

@@ -18,16 +18,23 @@ class MatrixBot:
         - refresh access token if expired
     """
 
-    def __init__(self, username, password, server,
-            botname="Matrix Bot", deviceid="MATRIXBOT", adminusers=[]):
+    def __init__(self,
+            username,
+            password,
+            server,
+            botname="Matrix Bot",
+            deviceid="MATRIXBOT",
+            adminusers=[],
+            store_path=None):
 
-        store_path = Path(__file__).parent.parent / "store"
+        if not store_path:
+            store_path = Path(os.getcwd()) / "store"
         if not store_path.is_dir():
             print(f"Creating store directory in {store_path}")
             os.mkdir(store_path)
-
-        self.client = nio.AsyncClient(server, username, device_id=deviceid,
-                store_path=store_path)
+        print(__file__)
+        print(f"Store path: {store_path}")
+        self.client = nio.AsyncClient(server, username, device_id=deviceid, store_path=store_path)
 
         self.password = password
         self.active_rooms = set()
