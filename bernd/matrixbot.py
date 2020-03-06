@@ -13,6 +13,10 @@ import nio
 
 
 class MatrixBot:
+    """
+    TODO:
+        - refresh access token if expired
+    """
 
     def __init__(self, username, password, server,
             botname="Matrix Bot", deviceid="MATRIXBOT", adminusers=[]):
@@ -175,6 +179,9 @@ class MatrixBot:
         except:
             pass
 
+
+
+
         async def response_cb(response):
             pass
             #print(type(response))
@@ -183,15 +190,17 @@ class MatrixBot:
             """
             TODO: add try catch and send exception text into room
             """
+            event = args[0]
             print(80 * "=")
             if room.room_id in self.client.rooms:
-                print(type(args[0]), "in room", self.client.rooms[room.room_id].display_name)
+                print(type(event), "in room", self.client.rooms[room.room_id].display_name)
             else:
-                print(type(args[0]), "in room", room.room_id)
+                print(type(event), "in room", room.room_id)
 
-            if type(args[0]) == nio.InviteMemberEvent:
+            if type(event) == nio.events.invite_events.InviteMemberEvent:
+                return
                 if room.room_id in self.ok_rooms or \
-                        args[0].sender in self.adminusers:
+                        event.sender in self.adminusers:
                             # TODO: check return
                             await asyncio.sleep(0.5)
                             response = await self.client.join(room.room_id)
@@ -202,18 +211,53 @@ class MatrixBot:
 
             m_room = MatrixRoom(self.client, room)
 
-            if type(args[0]) == nio.events.room_events.RoomMessageText:
-                print("\t" + str(args[0]))
+            if type(event) == nio.events.room_events.RoomMessageText:
+                print("\t" + str(event))
 
-            #if type(args[0]) == nio.MegolmEvent and args[0].decrypted == False:
-            if type(args[0]) == nio.MegolmEvent:
-                pass
-                #print(args[0])
-                #await self.client.share_group_session(args[0].room_id,
+            if type(event) == nio.events.room_events.RoomMemberEvent:
+                name = event.source.get("sender")
+                print(f"{name} joined room")
+
+            if type(event) == nio.MegolmEvent:
+                print("account shared:", self.client.olm_account_shared)
+                print("Unable to decrypt event")
+
+                k = await self.client.share_group_session(event.room_id,
+                       ignore_unverified_devices=False)
+                print(k)
+
+                try:
+                    print("Get missing sessions")
+                    #breakpoint()
+                    k = self.client.get_missing_sessions(room.room_id)
+                    print(k)
+                except Exception as e:
+                    print(e)
+
+                try:
+                    print("uploading keys")
+                    k = await self.client.keys_upload()
+                    print(k)
+                except Exception as e:
+                    print(e)
+                try:
+                    print("querying keys")
+                    k = await self.client.keys_query()
+                    print(k)
+                except Exception as e:
+                    print(e)
+                try:
+                    print("Trying to decrypt event")
+                    k = await self.client.decrypt_event(event)
+                    print(k)
+                except Exception as e:
+                    print(e)
+                # print(event)
+                #await self.client.share_group_session(event.room_id,
                 #        ignore_unverified_devices=True)
-                #print("Missing sessions:", self.client.get_missing_sessions(args[0].room_id))
+                #print("Missing sessions:", self.client.get_missing_sessions(event.room_id))
                 #print("device store:", self.client.device_store._entries.keys())
-                #k = self.client.get_missing_sessions(args[0].room_id)
+                #k = self.client.get_missing_sessions(event.room_id)
                 #print("Missing sessions:", k)
                 #k = await self.client.keys_claim(self.client.device_store._entries)
                 #k = await self.client.keys_claim(k)
@@ -222,13 +266,13 @@ class MatrixBot:
                 #print(k)
                 #print("Keys query:", await self.client.keys_query())
                 # try:
-                    # k = await self.client.request_room_key(args[0])
+                    # k = await self.client.request_room_key(event)
                     # print("await client request room key:", k)
                     # pass
                 # except Exception as e:
                     # print(e)
                 # try:
-                    # k = await self.client.continue_key_share(args[0])
+                    # k = await self.client.continue_key_share(event)
                     # print("continue key share:", k)
                 # except Exception as e:
                     # print(e)
@@ -243,15 +287,15 @@ class MatrixBot:
                 # except Exception as e:
                     # print(e)
               # #  try:
-              #      k = await self.client.decrypt_event(args[0])
+              #      k = await self.client.decrypt_event(event)
               #      print("client decrypt event", k)
               #  except nio.exceptions.EncryptionError as e:
-              #      #k = await self.client.request_room_key(args[0])
+              #      #k = await self.client.request_room_key(event)
               #      #print("await client request roo key:", k)
-              #      #k = await self.client.decrypt_event(args[0])
+              #      #k = await self.client.decrypt_event(event)
               #      #print("cleint decrypt event", k)
               #      print("Error Decrypting\n\n", e)
-            #print(type(args[0]))
+            #print(type(event))
             #print(self.client.should_query_keys,self.client.should_upload_keys,
             #        self.client.should_claim_keys)
 
@@ -259,16 +303,31 @@ class MatrixBot:
             #print(self.client.get_users_for_key_claiming())
             for handler in self.handlers:
                 pass
-                #print(type(args[0]))
-                #if type(args[0]) == nio.RoomMessageText:
-                    #if handler.test_callback(room, args[0].source):
-                        #await handler.handle_callback(m_room, args[0].source)
-            print()
+                #print(type(event))
+                #if type(event) == nio.RoomMessageText:
+                    #if handler.test_callback(room, event.source):
+                        #await handler.handle_callback(m_room, event.source)
 
+        def todevice_cb(request):
+            print(80 * "=")
+            print("Got to device request")
+            print(type(request))
+
+        def ephemeral_cb(arg1, arg2):
+            print(80 * "=")
+            print("Got ephemeral dings")
+            print(type(arg1), type(arg2))
 
         print(f"{self.botname} lauert nun.")
+
+
         # await self.client.sync()
-        # print(self.client.rooms)
+        # # k = await self.client.share_group_session(room_id="!wNYKPZiPMyfSiFYPzJ:stusta.de",
+                # # ignore_unverified_devices=False)
+        # k = await self.client.share_group_session(room_id="!wNYKPZiPMyfSiFYPzJ:stusta.de",
+                # ignore_unverified_devices=True)
+        # print(k)
+        # print(vars(self.client))
         # response = await self.client.room_send(
                 # #room_id="!GEEFteJNCNZoEmBfhD:matrix.org",
                 # room_id="!wNYKPZiPMyfSiFYPzJ:stusta.de",
@@ -279,10 +338,13 @@ class MatrixBot:
                 # },
                 # ignore_unverified_devices=True)
         # print(response)
-        self.client.add_response_callback(response_cb, nio.Response)
+        # await self.client.sync_forever(30000)
+        # self.client.add_response_callback(response_cb, nio.Response)
+        # self.client.add_event_callback(event_cb, nio.Event)
+
+
         self.client.add_event_callback(event_cb, nio.Event)
-        self.client.add_event_callback(event_cb, nio.InviteEvent)
-        self.client.add_event_callback(event_cb, nio.RoomEncryptionEvent)
-        self.client.add_to_device_callback(event_cb, nio.RoomKeyRequest)
+        self.client.add_to_device_callback(todevice_cb, nio.events.to_device.ToDeviceEvent)
+        self.client.add_ephemeral_callback(ephemeral_cb, nio.events.ephemeral.EphemeralEvent)
 
         await self.client.sync_forever(30000)
