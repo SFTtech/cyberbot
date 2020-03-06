@@ -24,18 +24,12 @@ def setup_cli():
     cli = argparse.ArgumentParser()
     cli.add_argument("-c", "--config", default="/etc/prism/config.py",
                      help="path to the configuration file")
-    cli.add_argument("-m", "--mode", default="cmd",
-                     help="mode of operation [\'cmd\' or \'daemon\'].")
     return cli
 
 
 async def main():
     cli = setup_cli()
     args = cli.parse_args()
-
-    # Interpret the execution mode
-    exec_mode = args.mode
-    # TODO: check mode
 
     # Read the configuration file
     config = configparser.ConfigParser()
@@ -46,7 +40,7 @@ async def main():
         or not all(key in config['BotMatrixId']
                 for key in ['USERNAME','PASSWORD','SERVER','ROOMS']):
         sys.stderr.write("""Bad config file. Please check that
-        all fields are available""")
+config file exists and all fields are available""")
         sys.exit(-1)
 
     check_default = lambda attr,default_val: vals[attr] if attr in vals else default_val
@@ -72,7 +66,7 @@ async def main():
             ) as bot:
         await bot.join_rooms(rooms)
         await bot.load_plugins(pluginpath)
-        await bot.listen(exec_mode)
+        await bot.listen()
 
 
 if __name__ == "__main__":
