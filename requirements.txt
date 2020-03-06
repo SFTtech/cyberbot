@@ -5,3 +5,4 @@ matrix_bot_api
 pathlib
 PyMVGLive
 feedparser
+matrix-nio
