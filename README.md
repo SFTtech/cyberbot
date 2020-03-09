@@ -1,5 +1,8 @@
 **Bernd Lauert**
 ----------------
+
+[Libolm v3](https://gitlab.matrix.org/matrix-org/olm) is needed.
+
 A matrix chatbot, originally designed for the [*StuStaNet
 e.V.*](http://vereinsanzeiger.stustanet.de/) administrator chatroom
 (#admins:stusta.de), written in python.
