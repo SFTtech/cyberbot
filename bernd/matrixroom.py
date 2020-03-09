@@ -55,12 +55,17 @@ class MatrixRoom():
 
 
     async def send_image(self, filename, text):
+        """
+        TODO: fix encryption
+        """
         p = pathlib.Path(filename)
         extension = p.suffix.lower()[1:]
         if extension not in ["gif", "png", "jpg", "jpeg"]:
             raise Exception(f"Unsupported image format: {extension}")
+        mime = "image/{}".format(extension.replace("jpeg", "jpg"))
+        #print(f"{mime=}")
         uresp,fdi = await self.client.upload(lambda x,y: filename,
-                content_type="image/{}".format(extension.replace("jpeg", "jpg")),
+                content_type=mime,
                 filename=p.name,
                 encrypt=self.nio_room.encrypted)
         if not type(uresp) == nio.UploadResponse:
@@ -69,12 +74,17 @@ class MatrixRoom():
             uri = uresp.content_uri
             c = {
                     "msgtype": "m.image",
-                    "url": uri,
                     "body": p.name,
+                    "mimetype": mime,
+                    # TODO: add info
                 }
             if fdi:
+                fdi["url"] = uri
+                fdi["mimetype"] = mime
                 c["file"] = fdi
-            print(fdi)
+            else:
+                c["file"] = {"url" : uri, "mimetype" : mime}
+            #print(fdi)
             await self.client.room_send(
                     room_id=self.nio_room.room_id,
                     message_type="m.room.message",
