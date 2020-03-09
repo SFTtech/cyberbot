@@ -54,7 +54,7 @@ class MatrixRoom():
         return k.members
 
 
-    async def send_image(self, filename, text):
+    async def send_image(self, filename):
         p = pathlib.Path(filename)
         extension = p.suffix.lower()[1:]
         if extension not in ["gif", "png", "jpg", "jpeg"]:
@@ -72,7 +72,7 @@ class MatrixRoom():
             uri = uresp.content_uri
             c = {
                     "msgtype": "m.image",
-                    "body": text,
+                    "body": p.name,
                     "info" : {"mimetype" : mime} # can be extended
                 }
 
