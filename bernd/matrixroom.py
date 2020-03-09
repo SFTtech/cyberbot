@@ -26,7 +26,7 @@ class MatrixRoom():
         print(response)
 
     async def send_text(self, txt):
-        response = await self.client.room_send(
+        await self.client.room_send(
                 room_id=self.nio_room.room_id,
                 message_type="m.room.message",
                 content={
@@ -34,7 +34,16 @@ class MatrixRoom():
                     "body": txt,
                 },
                 ignore_unverified_devices=True)
-        print(response)
+
+    async def send_notice(self, txt):
+        await self.client.room_send(
+                room_id=self.nio_room.room_id,
+                message_type="m.room.message",
+                content={
+                    "msgtype": "m.notice",
+                    "body": txt,
+                },
+                ignore_unverified_devices=True)
 
     async def get_joined_members(self):
        k = await self.client.joined_members(self.nio_room.room_id)
