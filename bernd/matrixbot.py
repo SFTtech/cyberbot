@@ -2,6 +2,7 @@ import asyncio
 import sys
 import importlib
 import os
+import time
 
 from pathlib import Path
 from pprint import pprint
@@ -38,6 +39,7 @@ class MatrixBot:
         self.handlers = []
         self.botname = botname
         self.adminusers = adminusers
+        self.last_sync_time = 0
         print("Admins: {}".format(" ".join(adminusers)))
 
 
@@ -47,7 +49,8 @@ class MatrixBot:
             sys.stderr.write("""There was an error while logging in. Please check
 credentials""")
             sys.exit(-1)
-        await self.client.sync() # otherwise all past messages will be handled
+        k = await self.client.sync() # otherwise all past messages will be handled
+        self.last_sync_time = time.time()
         if self.client.should_upload_keys:
             await self.client.keys_upload()
 
@@ -186,10 +189,12 @@ rooms: {response.message}""")
 
 
     async def introduce_bot(self,roomid):
-        print(f"Introducing myself to {roomid}")
-        m_room = MatrixRoom(self.client, self.client.rooms[roomid])
-        await m_room.send_text(f"""Hi, my name is {self.botname}! I was just (re)started. Type !help to see my (new) capabilities.""")
-        pass
+        try:
+            print(f"Introducing myself to {roomid}")
+            m_room = MatrixRoom(self.client, self.client.rooms[roomid])
+            await m_room.send_text(f"""Hi, my name is {self.botname}! I was just (re)started. Type !help to see my (new) capabilities.""")
+        except Exception as e:
+            print(e)
 
 
     async def listen(self):
@@ -201,21 +206,29 @@ rooms: {response.message}""")
             might_use_old_api = False
             pass
 
+
         async def handle_invite_event(room, event):
-                if room.room_id in self.ok_rooms or \
-                        event.sender in self.adminusers:
-                    print("Try joining room")
-                    # TODO: check return
-                    await asyncio.sleep(0.5)
-                    response = await self.client.join(room.room_id)
-                    print(response)
-                    self.introduce_bot(room.room_id)
-                else:
-                    print("Not joining room")
-                    print("Room not trusted or user not admin")
+            if (room.room_id in self.ok_rooms or \
+                    event.sender in self.adminusers) and \
+                    room.room_id not in await self.get_joined_rooms():
+                print("Try joining room")
+                # TODO: check return
+                await asyncio.sleep(0.5)
+                response = await self.client.join(room.room_id)
+                if type(response) == nio.JoinResponse:
+                    await self.introduce_bot(room.room_id)
+            else:
+                print("Not joining room")
+                print("Room not trusted or user not admin")
 
         async def handle_text_event(room, event):
+            # we ignor messages older than 5secs before last sync to solve
+            # joining new room and interpreting old messages
+            if (self.last_sync_time-5)*1000 > event.server_timestamp:
+                print("Ignoring last event")
+                return
             print(str(event))
+            pprint(vars(event))
             m_room = MatrixRoom(self.client, room)
             if event.sender == self.client.user:
                 print("Ignoring own message")
@@ -224,6 +237,7 @@ rooms: {response.message}""")
             for handler in self.handlers:
                 try:
                     if handler.test_callback(room, event.source):
+                        print("A handler was triggered")
                         await handler.handle_callback(m_room, event.source)
                 except Exception as e:
                     print(e)
@@ -257,6 +271,7 @@ rooms: {response.message}""")
             print(80 * "=")
             print("Got response")
             print(type(response))
+            self.last_sync_time = time.time()
             print("Ignoring response")
 
         async def todevice_cb(request):
