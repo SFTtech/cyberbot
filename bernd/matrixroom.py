@@ -1,6 +1,7 @@
 import asyncio
 import nio
 import pathlib
+import logging
 
 nio.RoomMember.get_friendly_name = lambda self: self.display_name
 
@@ -12,8 +13,6 @@ class MatrixRoom():
 
 
     async def send_html(self, formatted_txt, txt=""):
-        #print(formatted_txt)
-        #print(txt)
         response = await self.client.room_send(
                 room_id=self.nio_room.room_id,
                 message_type="m.room.message",
@@ -24,7 +23,7 @@ class MatrixRoom():
                     "body": txt,
                 },
                 ignore_unverified_devices=True)
-        print(response)
+        logging.debug(response)
 
     async def send_text(self, txt):
         await self.client.room_send(

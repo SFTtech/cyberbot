@@ -3,6 +3,7 @@ import sys
 import importlib
 import os
 import time
+import logging
 
 from pathlib import Path
 from pprint import pprint
@@ -22,16 +23,24 @@ class MatrixBot:
             botname="Matrix Bot",
             deviceid="MATRIXBOT",
             adminusers=[],
-            store_path=None):
+            store_path=None,
+            environment={}):
 
         if not store_path:
             store_path = Path(os.getcwd()) / "store"
 
         if not store_path.is_dir():
-            print(f"Creating store directory in {store_path}")
-            os.mkdir(store_path)
+            logging.info(f"Creating store directory in {store_path}")
+            try:
+                os.mkdir(store_path)
+            except Exception as e:
+                logging.error("Failed to create store path. Check permissions.")
+                print(e)
+                sys.exit(-1)
 
-        print(f"Store path: {store_path}")
+
+        logging.info(f"Store path: {store_path}")
+
         self.client = nio.AsyncClient(server, username, device_id=deviceid, store_path=str(store_path))
 
         self.password = password
@@ -40,13 +49,15 @@ class MatrixBot:
         self.botname = botname
         self.adminusers = adminusers
         self.last_sync_time = 0
-        print("Admins: {}".format(" ".join(adminusers)))
+        self.environment=environment
+
+        logging.info("Admins: {}".format(" ".join(adminusers)))
 
 
     async def login(self):
         response = await self.client.login(self.password)
         if type(response) == nio.LoginError:
-            sys.stderr.write("""There was an error while logging in. Please check
+            logging.error("""There was an error while logging in. Please check
 credentials""")
             sys.exit(-1)
         k = await self.client.sync() # otherwise all past messages will be handled
@@ -67,7 +78,7 @@ credentials""")
     async def get_joined_rooms(self):
         response = await self.client.joined_rooms()
         if type(response) == nio.JoinedRoomsError:
-            sys.stderr.write(f"""There was an error fetching joined
+            logging.error(f"""There was an error fetching joined
 rooms: {response.message}""")
             sys.exit(-1)
         return response.rooms
@@ -81,10 +92,8 @@ rooms: {response.message}""")
                 if rid in self.client.rooms
                 else rid
                 for rid in joined_rooms]
-        print("Already joined following rooms:\n\t", end="")
-        print("\n\t".join(joined_names))
-        print()
-        print(80*"-")
+        logging.debug("Already joined following rooms:\n\t\t{}"\
+                .format("\n\t\t".join(joined_names)))
 
 
         tojoin_rooms = [room for room in rooms if room not in joined_rooms]
@@ -94,15 +103,14 @@ rooms: {response.message}""")
         r = await asyncio.gather(*(self.client.join(room) for room in tojoin_rooms))
         k = list(zip(tojoin_rooms, r))
         if any(type(response) == nio.JoinError for _,response in k):
-            sys.stderr.write("There was an Error joining these rooms:\n\t")
-            sys.stderr.write("\n\t".join(f"{room}: {response.message}"
-                for room,response in k if type(response) == nio.JoinError))
-            sys.stderr.write("\n\n")
+            logging.warning("There was an Error joining these rooms:\n\t\t{}"\
+                    .format("\n\t\t".join(f"{room}: {response.message}"
+                for room,response in k if type(response) == nio.JoinError)))
 
         self.active_rooms.update(set(room for room,response in k if type(response != nio.JoinError)))
 
         if unused_rooms:
-            print("Leaving already old rooms...")
+            logging.info("Leaving already old rooms...")
             await asyncio.gather(*(self.client.room_leave(room) for room in unused_rooms))
 
         joined_rooms = await self.get_joined_rooms()
@@ -110,19 +118,17 @@ rooms: {response.message}""")
                 if rid in self.client.rooms
                 else rid
                 for rid in joined_rooms]
-        print("Active rooms:\n\t", end="")
-        print("\n\t".join(joined_names))
-        print()
-        print(80*"-")
+        logging.info("Active rooms:\n\t\t{}"\
+                .format("\n\t\t".join(joined_names)))
 
         if (await self.client.get_displayname()) != self.botname:
-            print(f"Setting Displayname to {self.botname}...")
+            logging.info(f"Setting Displayname to {self.botname}...")
             await self.client.set_displayname(self.botname)
 
 
     async def load_plugins(self, plugindir="plugins"):
         plugin_path = Path(__file__).resolve().parent.parent / plugindir
-        print("Loading plugins from: {}".format(plugin_path))
+        logging.info("Loading plugins from: {}".format(plugin_path))
         help_desc = []
 
         help_module = None
@@ -158,9 +164,9 @@ rooms: {response.message}""")
                         help_modname = modname
                     else:
                         module.register_to(self)
-                        print(f"  [+] {modname} loaded")
+                        logging.info(f"  [+] {modname} loaded")
                 except ImportError as e:
-                    print(f"  [!] {modname} not loaded: {str(e)}")
+                    logging.info(f"  [!] {modname} not loaded: {str(e)}")
         # Build the help message from the collected plugin description fragments
         help_txt = '\n'.join([
                 f"{self.botname} Commands and Capabilities",
@@ -173,7 +179,7 @@ rooms: {response.message}""")
 
         # load the help module after all help texts have been collected
         help_module.register_to(self)
-        print(f"  [+] {help_modname} loaded")
+        logging.info(f"  [+] {help_modname} loaded")
 
         # Start polling and save a handle to the child thread
         #child_thread = bot.start_polling()
@@ -190,15 +196,15 @@ rooms: {response.message}""")
 
     async def introduce_bot(self,roomid):
         try:
-            print(f"Introducing myself to {roomid}")
+            logging.info(f"Introducing myself to {roomid}")
             m_room = MatrixRoom(self.client, self.client.rooms[roomid])
             await m_room.send_text(f"""Hi, my name is {self.botname}! I was just (re)started. Type !help to see my (new) capabilities.""")
         except Exception as e:
-            print(e)
+            logging.info(e)
 
 
     async def listen(self):
-        might_use_old_api = False
+        might_use_old_api = False # currently unused
         try:
             import matrix_bot_api.mhandler
             might_use_old_api = True
@@ -211,47 +217,48 @@ rooms: {response.message}""")
             if (room.room_id in self.ok_rooms or \
                     event.sender in self.adminusers) and \
                     room.room_id not in await self.get_joined_rooms():
-                print("Try joining room")
+                logging.info(f"Try joining room {room.room_id}")
                 # TODO: check return
                 await asyncio.sleep(0.5)
                 response = await self.client.join(room.room_id)
                 if type(response) == nio.JoinResponse:
                     await self.introduce_bot(room.room_id)
             else:
-                print("Not joining room")
-                print("Room not trusted or user not admin")
+                logging.warning(f"Not joining room {room.room_id}")
+                logging.warning(f"Room not trusted or user not admin")
 
         async def handle_text_event(room, event):
-            # we ignor messages older than 5secs before last sync to solve
+            # we ignore messages older than 5secs before last sync to solve
             # joining new room and interpreting old messages
+            logging.debug(str(event))
             if (self.last_sync_time-5)*1000 > event.server_timestamp:
-                print("Ignoring last event")
+                logging.debug("Ignoring old event")
                 return
-            print(str(event))
-            pprint(vars(event))
+
             m_room = MatrixRoom(self.client, room)
             if event.sender == self.client.user:
-                print("Ignoring own message")
+                logging.debug("Ignoring own message")
                 return
 
             for handler in self.handlers:
                 try:
                     if handler.test_callback(room, event.source):
-                        print("A handler was triggered")
+                        logging.info("A handler was triggered")
                         await handler.handle_callback(m_room, event.source)
                 except Exception as e:
-                    print(e)
+                    logging.info(e)
 
         async def event_cb(room, *args):
             """
             TODO: add try catch and send exception text into room
             """
             event = args[0]
-            print(80 * "=")
+            logging.debug(80 * "=")
+            #pprint(vars(event))
             if room.room_id in self.client.rooms:
-                print(type(event), "in room", self.client.rooms[room.room_id].display_name)
+                logging.debug(type(event), "in room", self.client.rooms[room.room_id].display_name)
             else:
-                print(type(event), "in room", room.room_id)
+                logging.debug(type(event), "in room", room.room_id)
 
             if type(event) == nio.events.invite_events.InviteMemberEvent:
                 await handle_invite_event(room, event)
@@ -259,35 +266,34 @@ rooms: {response.message}""")
                 await handle_text_event(room, event)
             elif type(event) == nio.events.room_events.RoomMemberEvent:
                 name = event.source.get("sender")
-                print(f"{name} joined room")
+                logging.info(f"{name} joined room")
             elif type(event) == nio.MegolmEvent:
-                print("account shared:", self.client.olm_account_shared)
-                print("Unable to decrypt event")
+                logging.debug("account shared:", self.client.olm_account_shared)
+                logging.warning("Unable to decrypt event")
             else:
-                print("Ignoring event")
+                logging.debug("Ignoring unknown type event")
 
 
         async def response_cb(response):
-            print(80 * "=")
-            print("Got response")
-            print(type(response))
+            logging.debug("Got response")
+            logging.debug(type(response))
             self.last_sync_time = time.time()
-            print("Ignoring response")
+            logging.debug("Ignoring response")
 
         async def todevice_cb(request):
-            print(80 * "=")
-            print("Got to device request")
-            print(type(request))
-            print("Ignoring to device request")
+            logging.debug(80 * "=")
+            logging.debug("Got to device request")
+            logging.debug(type(request))
+            logging.debug("Ignoring to device request")
 
         async def ephemeral_cb(arg1, arg2):
-            print(80 * "=")
-            print("Got ephemeral dings")
-            print(type(arg1), type(arg2))
-            print("Ignoring ephemeral dings")
+            logging.debug(80 * "=")
+            logging.debug("Got ephemeral dings")
+            logging.debug(type(arg1), type(arg2))
+            logging.debug("Ignoring ephemeral dings")
 
 
-        print(f"{self.botname} lauert nun.")
+        logging.info(f"{self.botname} lauert nun.")
 
 
 
