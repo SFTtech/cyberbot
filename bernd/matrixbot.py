@@ -153,10 +153,11 @@ rooms: {response.message}""")
                     module.COUNTER_TAB = 'counters' # Name of counter table in database
                     module.RATELIMIT_TAB = 'ratelimit' # Name of ratelimit table in database
                     module.CORRECTION_TAB = 'corrections' # Name of correction table in database
-                    module.TRUSTED_ROOMS = self.ok_rooms    # Trusted rooms to join
+                    module.TRUSTED_ROOMS = self.ok_rooms.copy()    # Trusted rooms to join
                     module.CONFIG_USER = self.client.user   # Username, read from config file
                     module.CONFIG_SERVER = self.client.homeserver   # Server, read from config file
-                    module.CONFIG_ADMINUSERS = self.adminusers
+                    module.CONFIG_ADMINUSERS = self.adminusers.copy()
+                    module.ENVIRONMENT = self.environment.copy()
 
                     # skip help module, collect all help texts before registering
                     if (modname == 'plugins.help_plugin'):
@@ -256,7 +257,7 @@ rooms: {response.message}""")
             logging.debug(80 * "=")
             #pprint(vars(event))
             if room.room_id in self.client.rooms:
-                logging.debug(type(event), "in room", self.client.rooms[room.room_id].display_name)
+                logging.debug(f"{type(event)} in room {self.client.rooms[room.room_id].display_name})")
             else:
                 logging.debug(type(event), "in room", room.room_id)
 
@@ -289,7 +290,7 @@ rooms: {response.message}""")
         async def ephemeral_cb(arg1, arg2):
             logging.debug(80 * "=")
             logging.debug("Got ephemeral dings")
-            logging.debug(type(arg1), type(arg2))
+            logging.debug(f"{type(arg1)}, {type(arg2)}")
             logging.debug("Ignoring ephemeral dings")
 
 
