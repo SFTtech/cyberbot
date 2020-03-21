@@ -15,6 +15,9 @@ import nio
 
 
 class MatrixBot:
+    """
+    TODO: add whitelist/blacklist plugins
+    """
 
     def __init__(self,
             username,
@@ -148,15 +151,7 @@ rooms: {response.message}""")
                         help_desc.append(h)
 
 
-                    # Provide every module with a set of relevant environment vars
-                    module.DB_PATH = 'matrix.db'     # relative path to the sqlite3-dtb
-                    module.COUNTER_TAB = 'counters' # Name of counter table in database
-                    module.RATELIMIT_TAB = 'ratelimit' # Name of ratelimit table in database
-                    module.CORRECTION_TAB = 'corrections' # Name of correction table in database
                     module.TRUSTED_ROOMS = self.ok_rooms.copy()    # Trusted rooms to join
-                    module.CONFIG_USER = self.client.user   # Username, read from config file
-                    module.CONFIG_SERVER = self.client.homeserver   # Server, read from config file
-                    module.CONFIG_ADMINUSERS = self.adminusers.copy()
                     module.ENVIRONMENT = self.environment.copy()
 
                     # skip help module, collect all help texts before registering
