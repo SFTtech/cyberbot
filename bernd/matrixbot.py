@@ -4,6 +4,7 @@ import importlib
 import os
 import time
 import logging
+import traceback
 
 from pathlib import Path
 from pprint import pprint
@@ -130,9 +131,10 @@ rooms: {response.message}""")
 
 
     async def load_plugins(self, plugindir="plugins"):
+        self.handlers = []
         plugin_path = Path(__file__).resolve().parent.parent / plugindir
         logging.info("Loading plugins from: {}".format(plugin_path))
-        help_desc = []
+        help_desc = ["!reload \t\t-\t reload plugins"]
 
         help_module = None
 
@@ -225,10 +227,15 @@ rooms: {response.message}""")
 
         async def handle_text_event(room, event):
             # we ignore messages older than 5secs before last sync to solve
-            # joining new room and interpreting old messages
+            # joining new room and interpreting old messages problem
             logging.debug(str(event))
             if (self.last_sync_time-5)*1000 > event.server_timestamp:
                 logging.debug("Ignoring old event")
+                return
+
+            if event.source['content']['body'].startswith("!reload"):
+                logging.info("Reloading plugins...")
+                await self.load_plugins()
                 return
 
             m_room = MatrixRoom(self.client, room)
@@ -242,7 +249,8 @@ rooms: {response.message}""")
                         logging.info("A handler was triggered")
                         await handler.handle_callback(m_room, event.source)
                 except Exception as e:
-                    logging.info(e)
+                    await m_room.send_html(f"<pre><code>{traceback.format_exc()}</code></pre>")
+                    logging.warning(traceback.format_exc())
 
         async def event_cb(room, *args):
             """
