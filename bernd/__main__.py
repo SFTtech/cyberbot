@@ -5,6 +5,7 @@ import sys
 import logging
 
 from pathlib import Path
+from pprint import pprint
 
 from matrixbot import MatrixBot
 
@@ -57,7 +58,6 @@ config file exists and all fields are available""")
     username   = vals['USERNAME']
     password   = vals['PASSWORD']
     server     = vals['SERVER']
-    rooms      = list(filter(lambda x: x.strip(), vals['ROOMS'].split(';')))
     botname    = check_default("BOTNAME", DEFAULT_BOTNAME)
     pluginpath = check_default("PLUGINPATH", DEFAULT_PLUGINPATH)
     deviceid   = check_default("DEVICEID", DEFAULT_DEVICEID)
@@ -74,10 +74,11 @@ config file exists and all fields are available""")
             deviceid=deviceid,
             adminusers=adminusers,
             store_path=store_path,
-            environment=environment
+            environment=environment,
+            plugindir=pluginpath
             ) as bot:
-        await bot.join_rooms(rooms)
-        await bot.load_plugins(pluginpath)
+        await bot.load_rooms()
+        await bot.read_plugins()
         await bot.listen()
 
 
