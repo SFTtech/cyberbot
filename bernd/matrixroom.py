@@ -3,6 +3,7 @@ import nio
 import pathlib
 import logging
 import importlib
+from itertools import compress
 
 from pathlib import Path
 
@@ -16,6 +17,8 @@ class MatrixRoom():
             self.mroom = mroom
             self.pluginid = pluginid
             self.pluginname = pluginname
+            self.handlers = []
+            self.module = None
 
         async def load(self):
             filename = self.pluginname + "_plugin.py"
@@ -23,16 +26,37 @@ class MatrixRoom():
             logging.info(f"Room {self.mroom.nio_room.room_id}: trying to load {plugin_path / filename}")
             if (plugin_path / filename).exists():
                 modname = f'plugins.{self.pluginname}'
-                loader = importlib.machinery.SourceFileLoader(modname, str(filename))
+                loader = importlib.machinery.SourceFileLoader(modname,
+                        str(plugin_path/filename))
                 try:
                     self.module = loader.load_module(modname)
-                    module.ENVIRONMENT = self.mroom.bot.environment.copy()
-                except:
-                    pass
+                    self.module.ENVIRONMENT = self.mroom.bot.environment.copy()
+                    self.module.register_to(self)
+                    return True
+                except Exception as e:
+                    logging.warning(str(e))
+                    return False
             else:
                 logging.warning(f"""
                 Room {self.mroom.room_id}: couldn't load plugin {self.pluginname}: file does not exist
                 """)
+                return False
+
+        def add_handler(self, handler):
+            self.handlers.append(handler)
+
+        async def test_callback(self, event):
+            """
+            TODO: change this architecture
+            """
+            self.handler_results = [handler.test_callback(self.mroom, event.source) for handler in self.handlers]
+            print(self.handlers)
+            return any(self.handler_results)
+        
+        async def handle_callback(self, event):
+            totrigger = compress(self.handlers,self.handler_results)
+            for handler in totrigger:
+                await handler.handle_callback(self.mroom, event.source)
 
 
     async def load_plugins(self):
@@ -48,7 +72,16 @@ class MatrixRoom():
             self.plugins.append(MatrixRoom.Plugin(self,pid,pname))
 
         # load plugins
-        await asyncio.gather(*(p.load() for p in self.plugins))
+        results = await asyncio.gather(*(p.load() for p in self.plugins))
+        self.plugins = list(compress(self.plugins,results))
+
+
+    async def handle_text_event(self, event):
+        results = await asyncio.gather(*(p.test_callback(event)
+            for p in self.plugins))
+        await asyncio.gather(*(p.handle_callback(event)
+            for p in compress(self.plugins,results)))
+
 
 
     def __init__(self, matrixbot, nio_room):
@@ -85,14 +118,18 @@ class MatrixRoom():
         VALUES (?,?); 
         """, (self.room_id, pluginname))
         self.bot.conn.commit()
+        r = c.execute("""
+        SELECT last_insert_rowid();
+        """)
+        pid, = r.fetchall()
 
-        plugin = MatrixRoom.Plugin(self,pid,pname)
+        plugin = MatrixRoom.Plugin(self,pid,pluginname)
         await plugin.load()
         self.plugins.append(plugin)
 
     async def remove_plugin(self, pluginname):
         c = self.bot.conn.cursor()
-        indizes = [i for i,p in enumerate(self.plugins) if p.pluginname=pluginname]
+        indizes = [i for (i,p) in enumerate(self.plugins) if p.pluginname==pluginname]
         if indizes:
             r = c.execute("""
             DELETE FROM room_plugins

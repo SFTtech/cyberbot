@@ -225,7 +225,7 @@ credentials""")
             matching_rooms = [mroom for mroom in self.active_rooms if
                     mroom.room_id == room.room_id]
             if matching_rooms:
-                matching_rooms[0].handle_text_event(event)
+                await matching_rooms[0].handle_text_event(event)
             else:
                 logging.info("Ignoring text event in non-active room")
 
