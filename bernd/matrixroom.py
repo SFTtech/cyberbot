@@ -48,12 +48,16 @@ class MatrixRoom():
         async def test_callback(self, event):
             """
             TODO: change this architecture
+            TODO: add try catch and print to room
             """
             self.handler_results = [handler.test_callback(self.mroom, event.source) for handler in self.handlers]
             print(self.handlers)
             return any(self.handler_results)
         
         async def handle_callback(self, event):
+            """
+            TODO: add try catch and print to room
+            """
             totrigger = compress(self.handlers,self.handler_results)
             for handler in totrigger:
                 await handler.handle_callback(self.mroom, event.source)
@@ -63,8 +67,9 @@ class MatrixRoom():
         c = self.bot.conn.cursor()
         r = c.execute("""
         SELECT pluginid,pluginname
-        FROM rooms JOIN room_plugins;
-        """)
+        FROM rooms JOIN room_plugins ON rooms.roomid == room_plugins.roomid
+        WHERE rooms.roomid=?;
+        """, (self.room_id,))
 
         # construct plugins
         self.plugins = []
@@ -112,6 +117,9 @@ class MatrixRoom():
         return room
 
     async def add_plugin(self, pluginname):
+        if not pluginname in self.bot.available_plugins:
+            loggin.warning(f"{self.roomid} tried to load invalid plugin {pluginname}")
+            return
         c = self.bot.conn.cursor()
         r = c.execute("""
         INSERT INTO room_plugins(roomid,pluginname)

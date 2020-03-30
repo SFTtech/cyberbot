@@ -1,17 +1,40 @@
 from matrix_bot_api.mcommand_handler import MCommandHandler
+import asyncio
 
 HELP_DESC = ("""
-!kickbot\t\t-\tmake bot leave the room
+!listplugins\t\t\t-\tlist available plugins
+!addplugin plugin [plugin2 ...]\t-\tadd plugin
+!remplugin plugin [plugin2 ...]\t-\tremove plugin
 """[1:-1])
 
-def register_to(bot):
+def register_to(plugin):
 
-    async def kickbot_callback(room, event):
-        if event.get('sender') in CONFIG_ADMINUSERS:
-            await room.send_text("Bye, bye. Invite me to this room to let me join again.")
-            await room.client.room_leave(room.nio_room.room_id)
-        else:
-            await room.send_text("You are not privileged to do this.")
+    async def listplugins_callback(room, event):
+        available = plugin.mroom.bot.available_plugins
+        pluginlist = ""
+        for k,v in available.items():
+            indentet = "\t" + v[:-1].replace("\n", "\n\t") + v[-1]
+            pluginlist += f"{k}:\n{indentet}\n"
 
-    kickbot_handler = MCommandHandler("kickbot", kickbot_callback)
-    bot.add_handler(kickbot_handler)
+        await room.send_html(f"""<pre><code>{pluginlist}</pre></code>""")
+            
+    listplugins_handler = MCommandHandler("listplugins", listplugins_callback)
+    plugin.add_handler(listplugins_handler)
+
+
+    async def addplugin_callback(room, event):
+        args = event['content']['body'].split()
+        await asyncio.gather(*(plugin.mroom.add_plugin(pname) for pname in args[1:]))
+        await room.send_text("Call !help to see new plugins")
+
+    addplugin_handler = MCommandHandler("addplugin", addplugin_callback)
+    plugin.add_handler(addplugin_handler)
+
+
+    async def remplugin_callback(room, event):
+        args = event['content']['body'].split()
+        await asyncio.gather(*(plugin.mroom.remove_plugin(pname) for pname in args[1:]))
+        await room.send_text("Call !help to see new plugins")
+
+    remplugin_handler = MCommandHandler("remplugin", remplugin_callback)
+    plugin.add_handler(remplugin_handler)

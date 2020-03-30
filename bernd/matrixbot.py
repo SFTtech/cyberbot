@@ -147,14 +147,15 @@ credentials""")
         # plugins must be called ...plugin.py, so other modules in the same
         # directory are not falsely loaded (allows for plugin decomposition)
         for filename in plugin_path.glob("*_plugin.py"):
-            if (plugin_path / filename).exists():
+            if filename.exists():
                 modname = f'plugins.{filename.stem}'
                 loader = importlib.machinery.SourceFileLoader(modname, str(filename))
                 try:
                     module = loader.load_module(modname)
-                    self.available_plugins[modname] = module.HELP_DESC
-                except:
-                    pass
+                    pluginname = filename.stem.replace("_plugin","")
+                    self.available_plugins[pluginname] = module.HELP_DESC
+                except Exception as e:
+                    logging.warning(e)
 
 
     def add_handler(self, handler):
