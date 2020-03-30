@@ -33,12 +33,6 @@ class MatrixRoom():
                 logging.warning(f"""
                 Room {self.mroom.room_id}: couldn't load plugin {self.pluginname}: file does not exist
                 """)
-                #c = self.mroom.bot.conn.cursor()
-                #c.execute("""
-                #DELETE FROM room_plugins
-                #...
-                #""")
-
 
 
     async def load_plugins(self):
@@ -85,12 +79,27 @@ class MatrixRoom():
         return room
 
     async def add_plugin(self, pluginname):
-        pass
+        c = self.bot.conn.cursor()
+        r = c.execute("""
+        INSERT INTO room_plugins(roomid,pluginname)
+        VALUES (?,?); 
+        """, (self.room_id, pluginname))
+        self.bot.conn.commit()
+
+        plugin = MatrixRoom.Plugin(self,pid,pname)
+        await plugin.load()
+        self.plugins.append(plugin)
 
     async def remove_plugin(self, pluginname):
-        pass
-
-
+        c = self.bot.conn.cursor()
+        indizes = [i for i,p in enumerate(self.plugins) if p.pluginname=pluginname]
+        if indizes:
+            r = c.execute("""
+            DELETE FROM room_plugins
+            WHERE roomid=? AND pluginname=?;
+            """, (self.room_id, pluginname))
+            self.bot.conn.commit()
+            del self.plugins[indizes[0]]
 
 
     #=============================================
