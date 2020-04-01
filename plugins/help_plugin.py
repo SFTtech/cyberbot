@@ -12,6 +12,7 @@ def register_to(plugin):
         pluginnames = [p.pluginname for p in plugin.mroom.plugins]
         help_txt = "\n".join(available[pname] for pname in pluginnames)
         help_txt += '''
+
         For more information, look at the wiki page at <a href="">TODO</a>
         '''
         formatted_help = format_help(help_txt)

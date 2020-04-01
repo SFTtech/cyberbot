@@ -8,7 +8,7 @@ import logging
 from matrixroom import MatrixRoom
 
 
-HELP_DESC = ("(automatic)\t\t-The bot will post changes in rbg gitlab Cybergruppe Group")
+HELP_DESC = ("gitlab\t\t- (WIP)The bot will post changes in rbg gitlab Cybergruppe Group")
 
 class RSSGitlabFeed:
 

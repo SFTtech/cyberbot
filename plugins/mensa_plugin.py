@@ -97,19 +97,47 @@ async def send_mensadata(plugin, location, date):
     cur_date = ''
     cur_mensa_id = ''
     html = '<pre><code>'
-    for entry in entries:
-        if entry['date'] != cur_date:
-            cur_date = entry['date']
-            ndate = datetime.date.fromisoformat(cur_date)
-            html += f"\n<h3>{ndate: %A, %B %d}</h3>"
-            cur_mensa_id = ''
-        if entry['mensa_id'] != cur_mensa_id:
-            cur_mensa_id = entry['mensa_id']
-            k = [a['name'] for a in m['mensa_mensen'] if a['id'] == cur_mensa_id]
-            floc = k[0] if len(k) > 0 else cur_mensa_id
-            html += f"\n<h6><u>{floc}<u></h6>\n"
+    if entries:
+        for entry in entries:
+            if entry['date'] != cur_date:
+                cur_date = entry['date']
+                ndate = datetime.date.fromisoformat(cur_date)
+                html += f"\n<h3>{ndate: %A, %B %d}</h3>"
+                cur_mensa_id = ''
+            if entry['mensa_id'] != cur_mensa_id:
+                cur_mensa_id = entry['mensa_id']
+                k = [a['name'] for a in m['mensa_mensen'] if a['id'] == cur_mensa_id]
+                floc = k[0] if len(k) > 0 else cur_mensa_id
+                html += f"\n<h6><u>{floc}<u></h6>\n"
 
-        html += f"""{entry['name']}\n"""
+            html += f"""{entry['name']}\n"""
+    else:
+        html = '''<pre><code>
+        No food found :/
+        Take a pizza slice:</br>
+                                             ._
+                                   ,(  `-.
+                                 ,': `.   `.
+                               ,` *   `-.   \
+                             ,'  ` :+  = `.  `.
+                           ,~  (o):  .,   `.  `.
+                         ,'  ; :   ,(__) x;`.  ;
+                       ,'  :'  itz  ;  ; ; _,-'
+                     .'O ; = _' C ; ;'_,_ ;
+                   ,;  _;   ` : ;'_,-'   i'
+                 ,` `;(_)  0 ; ','       :
+               .';6     ; ' ,-'~
+             ,' Q  ,& ;',-.'
+           ,( :` ; _,-'~  ;
+         ,~.`c _','
+       .';^_,-' ~
+     ,'_;-''
+    ,,~
+    i'
+    :
+
+
+        </code></pre>'''
     await plugin.send_html(html)
 
 
