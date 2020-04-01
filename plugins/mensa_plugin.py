@@ -116,7 +116,7 @@ async def send_mensadata(room, location, date):
 
 def register_to(bot):
     async def mensa_callback(room, event):
-        args = shlex.split(event['content']['body'])
+        args = shlex.split(event.source['content']['body'])
         location,date = parse_args(args)
         await send_mensadata(room, location, date)
 

@@ -50,7 +50,7 @@ class MatrixRoom():
             TODO: change this architecture
             TODO: add try catch and print to room
             """
-            self.handler_results = [handler.test_callback(self.mroom, event.source) for handler in self.handlers]
+            self.handler_results = [handler.test_callback(self.mroom, event) for handler in self.handlers]
             print(self.handlers)
             return any(self.handler_results)
         
@@ -60,7 +60,7 @@ class MatrixRoom():
             """
             totrigger = compress(self.handlers,self.handler_results)
             for handler in totrigger:
-                await handler.handle_callback(self.mroom, event.source)
+                await handler.handle_callback(self.mroom, event)
 
 
     async def load_plugins(self):
@@ -148,7 +148,7 @@ class MatrixRoom():
 
 
     #=============================================
-    # Plugin helper functions
+    # Plugin helper functions (room)
     #==============================================
     async def introduce_bot(self):
         try:
@@ -239,3 +239,10 @@ class MatrixRoom():
                     message_type="m.room.message",
                     content=c,
                     ignore_unverified_devices=True)
+
+
+    #=============================================
+    # Plugin helper functions (misc)
+    #==============================================
+    def extract_args(event):
+        pass

@@ -3,6 +3,9 @@ import feedparser
 from threading import Thread
 import dbm.ndbm
 import time
+import logging
+
+from matrixroom import MatrixRoom
 
 
 HELP_DESC = ("(automatic)\t\t-The bot will post changes in rbg gitlab Cybergruppe Group")
@@ -12,32 +15,34 @@ class RSSGitlabFeed:
     def __init__(self, bot):
         self.bot = bot
         self.dbmfile = "feed_read.dbm"
-        self.thread = Thread(target=self.start, daemon=True)
+        self.thread = Thread(target=self.start_t, daemon=True)
         self.thread.start()
 
-    def start(self):
-        self.check_for_changes()
+    async def start_t(self):
+        await self.check_for_changes()
 
-    def check_for_changes(self):
+    async def check_for_changes(self):
         rss_token = ENVIRONMENT.get('GITLABRSSTOKEN')
         while True:
             try:
-                feed = feedparser.parse(f'https://gitlab.rbg.tum.de/cyber.atom?feed_token={rss_token}')
-                self.update_from_feed(feed)
+                feed_url = f'https://gitlab.rbg.tum.de/cyber.atom?feed_token={rss_token}'
+                logging.info(f"GITLAB: fetching {feed_url}")
+                feed = feedparser.parse(feed_url)
+                await self.update_from_feed(feed)
             finally:
-                time.sleep(60)
+                time.sleep(5)
 
-    def update_from_feed(self, feed):
+    async def update_from_feed(self, feed):
         """
         Generate a list of new entries, and mark the new entries as read
         """
         with dbm.open(self.dbmfile, 'c') as db:
             for entry in reversed(feed['entries']):
                 if entry['id'] not in db:
-                    self.notify_update(entry)
+                    await self.notify_update(entry)
                     db[entry['id']] = "1"
 
-    def notify_update(self, entry):
+    async def notify_update(self, entry):
         """
         Extract the relevant information from the entry
         If the room is not yet set, it will terminate but also not record any
@@ -48,9 +53,16 @@ class RSSGitlabFeed:
         if ".atom?rss_token=" in entry['link']:
             entry['link'] = "https://gitlab.rbg.de/cyber"
 
-        for rid, r in self.bot.client.get_rooms().items():
+        for rid in self.bot.active_rooms:
             if rid in TRUSTED_ROOMS:
-                r.send_notice("{} ({})".format(entry['title'], entry['link']))
+                await self.bot.client.room_send(
+                    room_id=rid,
+                    message_type="m.room.message",
+                    content={
+                        "msgtype": "m.notice",
+                        "body": "{} ({})".format(entry['title'], entry['link']),
+                    },
+                    ignore_unverified_devices=True)
 
 
 def register_to(bot):

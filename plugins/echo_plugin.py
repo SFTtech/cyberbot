@@ -6,10 +6,10 @@ def register_to(bot):
 
     # Echo back the given command
     async def echo_callback(room, event):
-        args = event['content']['body'].split()
+        args = event.source['content']['body'].split()
         args.pop(0)
 
-        await room.send_text(event['sender'] + ': ' + ' '.join(args))
+        await room.send_text(event.source['sender'] + ': ' + ' '.join(args))
 
     # Add a command handler waiting for the echo command
     echo_handler = MCommandHandler("echo", echo_callback)

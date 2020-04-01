@@ -3,8 +3,8 @@ import asyncio
 
 HELP_DESC = ("""
 !listplugins\t\t\t-\tlist available plugins
-!addplugin plugin [plugin2 ...]\t-\tadd plugin
-!remplugin plugin [plugin2 ...]\t-\tremove plugin
+!addplugin plugin [plugin2 ...]\t-\tadd plugin(s)
+!remplugin plugin [plugin2 ...]\t-\tremove plugin(s)
 """[1:-1])
 
 def register_to(plugin):
@@ -23,7 +23,7 @@ def register_to(plugin):
 
 
     async def addplugin_callback(room, event):
-        args = event['content']['body'].split()
+        args = event.source['content']['body'].split()
         await asyncio.gather(*(plugin.mroom.add_plugin(pname) for pname in args[1:]))
         await room.send_text("Call !help to see new plugins")
 
@@ -32,7 +32,7 @@ def register_to(plugin):
 
 
     async def remplugin_callback(room, event):
-        args = event['content']['body'].split()
+        args = event.source['content']['body'].split()
         await asyncio.gather(*(plugin.mroom.remove_plugin(pname) for pname in args[1:]))
         await room.send_text("Call !help to see new plugins")
 
