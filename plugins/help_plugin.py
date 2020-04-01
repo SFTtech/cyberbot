@@ -16,7 +16,7 @@ def register_to(plugin):
         '''
         formatted_help = format_help(help_txt)
         #print(dir(room))
-        await room.send_html(formatted_help, help_txt)
+        await plugin.send_html(formatted_help, help_txt)
 
     help_handler = MCommandHandler("help", help_callback)
     plugin.add_handler(help_handler)

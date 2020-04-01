@@ -12,8 +12,8 @@ HELP_DESC = ("(automatic)\t\t-The bot will post changes in rbg gitlab Cybergrupp
 
 class RSSGitlabFeed:
 
-    def __init__(self, bot):
-        self.bot = bot
+    def __init__(self, plugin):
+        self.plugin = plugin
         self.dbmfile = "feed_read.dbm"
         self.thread = Thread(target=self.start_t, daemon=True)
         self.thread.start()
@@ -53,9 +53,9 @@ class RSSGitlabFeed:
         if ".atom?rss_token=" in entry['link']:
             entry['link'] = "https://gitlab.rbg.de/cyber"
 
-        for rid in self.bot.active_rooms:
+        for rid in self.plugin.bot.active_rooms:
             if rid in TRUSTED_ROOMS:
-                await self.bot.client.room_send(
+                await self.plugin.bot.client.room_send(
                     room_id=rid,
                     message_type="m.room.message",
                     content={
@@ -65,5 +65,5 @@ class RSSGitlabFeed:
                     ignore_unverified_devices=True)
 
 
-def register_to(bot):
-    feedreader = RSSGitlabFeed(bot)
+def register_to(plugin):
+    feedreader = RSSGitlabFeed(plugin)

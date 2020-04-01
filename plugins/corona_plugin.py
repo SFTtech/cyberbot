@@ -12,7 +12,7 @@ def get_stats():
     return j
 
 
-def register_to(bot):
+def register_to(plugin):
 
     #async def get_corona_stats()
 
@@ -32,8 +32,8 @@ def register_to(bot):
                 html += f"<td>{state[field]}</td>"
             html += "    </tr>\n"
         html += "</table>"
-        await room.send_html(html)
+        await plugin.send_html(html)
 
     # Add a command handler waiting for the corona command
     corona_handler = MCommandHandler("corona", corona_callback)
-    bot.add_handler(corona_handler)
+    plugin.add_handler(corona_handler)

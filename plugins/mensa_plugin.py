@@ -80,7 +80,7 @@ def parse_args(args):
     return location,date
 
 
-async def send_mensadata(room, location, date):
+async def send_mensadata(plugin, location, date):
 
     m = get_mensadata()
     c2i,i2c = get_city_to_mensen(m)
@@ -110,20 +110,22 @@ async def send_mensadata(room, location, date):
             html += f"\n<h6><u>{floc}<u></h6>\n"
 
         html += f"""{entry['name']}\n"""
-    await room.send_html(html)
+    await plugin.send_html(html)
 
 
 
-def register_to(bot):
+def register_to(plugin):
     async def mensa_callback(room, event):
-        args = shlex.split(event.source['content']['body'])
+        args = plugin.extract_args(event)
         location,date = parse_args(args)
-        await send_mensadata(room, location, date)
+        await send_mensadata(plugin, location, date)
 
     # Add a command handler waiting for the echo command
     mensa_handler = MCommandHandler("mensa", mensa_callback)
-    bot.add_handler(mensa_handler)
+    plugin.add_handler(mensa_handler)
 
+
+# DEBUGGING
 if __name__ == "__main__":
     m = get_mensadata()
     print(m.keys())

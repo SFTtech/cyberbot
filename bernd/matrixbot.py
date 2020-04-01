@@ -11,6 +11,7 @@ from pathlib import Path
 from pprint import pprint
 
 from matrixroom import MatrixRoom
+from plugin import Plugin
 
 import nio
 
