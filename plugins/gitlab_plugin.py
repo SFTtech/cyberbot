@@ -15,22 +15,19 @@ class RSSGitlabFeed:
     def __init__(self, plugin):
         self.plugin = plugin
         self.dbmfile = "feed_read.dbm"
-        self.thread = Thread(target=self.start_t, daemon=True)
-        self.thread.start()
-
-    async def start_t(self):
-        await self.check_for_changes()
 
     async def check_for_changes(self):
         rss_token = ENVIRONMENT.get('GITLABRSSTOKEN')
-        while True:
+        async def k():
             try:
                 feed_url = f'https://gitlab.rbg.tum.de/cyber.atom?feed_token={rss_token}'
                 logging.info(f"GITLAB: fetching {feed_url}")
                 feed = feedparser.parse(feed_url)
                 await self.update_from_feed(feed)
-            finally:
-                time.sleep(5)
+            except:
+                pass
+        await self.plugin.start_task(k,5)
+
 
     async def update_from_feed(self, feed):
         """
@@ -54,16 +51,16 @@ class RSSGitlabFeed:
             entry['link'] = "https://gitlab.rbg.de/cyber"
 
         for rid in self.plugin.bot.active_rooms:
-            if rid in TRUSTED_ROOMS:
-                await self.plugin.bot.client.room_send(
-                    room_id=rid,
-                    message_type="m.room.message",
-                    content={
-                        "msgtype": "m.notice",
-                        "body": "{} ({})".format(entry['title'], entry['link']),
-                    },
-                    ignore_unverified_devices=True)
+            await self.plugin.bot.client.room_send(
+                room_id=rid,
+                message_type="m.room.message",
+                content={
+                    "msgtype": "m.notice",
+                    "body": "{} ({})".format(entry['title'], entry['link']),
+                },
+                ignore_unverified_devices=True)
 
 
 async def register_to(plugin):
     feedreader = RSSGitlabFeed(plugin)
+    await feedreader.check_for_changes()
