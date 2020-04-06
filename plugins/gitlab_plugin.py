@@ -40,7 +40,10 @@ async def register_to(plugin):
                     logging.info(f"GITLAB: fetching {self.url}")
                     feed_url = f'{self.url}?feed_token={self.feed_token}'
                     feed = feedparser.parse(feed_url)
-                    await self.update_from_feed(feed)
+                    if self.last_update == time.gmtime(0):
+                        await self.update_from_feed(feed,5)
+                    else:
+                        await self.update_from_feed(feed)
                 except Exception as e:
                     print(e)
             self.task = await plugin.start_task(check_for_changes,INTERVAL)
@@ -56,11 +59,17 @@ async def register_to(plugin):
             self.start()
 
 
-        async def update_from_feed(self, feed):
-            for entry in reversed(feed['entries']):
+        async def update_from_feed(self, feed, last_n=-1):
+            if last_n != -1:
+                feed['entries'].sort(key=lambda x: x.updated_parsed)
+                es = list(reversed(feed['entries']))[:first_n]
+            else:
+                es = list(reversed(feed['entries']))
+            for entry in es:
                 if self.last_update is None or entry.updated_parsed > self.last_update:
                     await self.notify_update(entry)
-            self.last_update = max(entry.updated_parsed for entry in feed['entries'])
+
+            self.last_update = max(entry.updated_parsed for entry in es)
             await store_feeds()
 
         async def notify_update(self, entry):
