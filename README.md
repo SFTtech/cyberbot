@@ -25,14 +25,8 @@ separated by a semicolon (';'). Quotes should be generally omitted in the file.
 After the bot has been configured, issue:
 
 ```sh
-python bernd -c <config_file> [-m <mode>]
+python bernd -c <config_file>
 ```
-
-Possible modes of operation are *cmd* (default) and *daemon*. In *daemon* mode,
-the bot won't wait for user input and join plugin child threads instead. This
-mode enables seamless invocation as an e.g. systemd service. However, *daemon*
-mode requires a modified version of the underlying MatrixBotAPI, which returns
-the created thread upon invocation of the *start_polling()* function.
 
 **Structure**:
 

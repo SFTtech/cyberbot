@@ -139,7 +139,7 @@ credentials""")
     async def read_plugins(self):
         plugin_path = Path(self.plugindir)
         logging.info("Reading available plugins from: {}".format(plugin_path))
-        help_desc = ["!reload \t\t-\t reload plugins"]
+        #help_desc = ["!reload \t\t-\t reload plugins"]
 
         help_module = None
 

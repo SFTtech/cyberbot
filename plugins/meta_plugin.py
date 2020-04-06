@@ -5,6 +5,7 @@ HELP_DESC = ("""
 !listplugins\t\t\t-\tlist available plugins
 !addplugin plugin [plugin2 ...]\t-\tadd plugin(s)
 !remplugin plugin [plugin2 ...]\t-\tremove plugin(s)
+!reload\t\t\t\t-\tReload plugins
 """[1:-1])
 
 
@@ -47,3 +48,12 @@ def register_to(plugin):
 
     remplugin_handler = MCommandHandler("remplugin", remplugin_callback)
     plugin.add_handler(remplugin_handler)
+
+
+    async def reload_callback(room, event):
+        await plugin.room.bot.read_plugins() # look for new available plugins
+        # TODO: shutdown background processes
+        await plugin.send_text("Reloaded Plugins.")
+
+    reload_handler = MCommandHandler("reload", reload_callback)
+    plugin.add_handler(reload_handler)

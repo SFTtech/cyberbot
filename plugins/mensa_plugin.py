@@ -114,7 +114,7 @@ async def send_mensadata(plugin, location, date):
     else:
         html = '''<pre><code>
         No food found :/
-        Take a pizza slice:</br>
+        Take a slice of pizza:</br>
                                              ._
                                    ,(  `-.
                                  ,': `.   `.
