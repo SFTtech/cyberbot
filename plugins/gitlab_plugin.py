@@ -49,17 +49,19 @@ class RSSGitlabFeed:
         # RSS token - this is a horrible workaround for gitlab
         if ".atom?rss_token=" in entry['link']:
             entry['link'] = "https://gitlab.rbg.de/cyber"
-
-        for rid in self.plugin.bot.active_rooms:
-            await self.plugin.bot.client.room_send(
-                room_id=rid,
-                message_type="m.room.message",
-                content={
-                    "msgtype": "m.notice",
-                    "body": "{} ({})".format(entry['title'], entry['link']),
-                },
-                ignore_unverified_devices=True)
-
+        print(entry)
+        plugin.send_notice(f"{entry['title']} ({entry['link']})")
+#
+#        for rid in self.plugin.bot.active_rooms:
+#            await self.plugin.bot.client.room_send(
+#                room_id=rid,
+#                message_type="m.room.message",
+#                content={
+#                    "msgtype": "m.notice",
+#                    "body": "{} ({})".format(entry['title'], entry['link']),
+#                },
+#                ignore_unverified_devices=True)
+#
 
 async def register_to(plugin):
     feedreader = RSSGitlabFeed(plugin)
