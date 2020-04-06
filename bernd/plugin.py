@@ -151,6 +151,46 @@ class Plugin:
 
 
     #=============================================
+    # Plugin helper functions (key-value-store)
+    #==============================================
+    # only use strings. Use json for conversion
+    async def kvstore_get_keys(self):
+        c = self.bot.conn.cursor()
+        r = c.execute("""
+        SELECT key
+        FROM plugin_data
+        WHERE pluginid=?;
+        """, (self.pluginid,))
+        k = [k[0] for k in r.fetchall()]
+        return k
+
+    async def kvstore_get_value(self, key):
+        c = self.bot.conn.cursor()
+        r = c.execute("""
+        SELECT value
+        FROM plugin_data
+        WHERE pluginid=? and key=?;
+        """, (self.pluginid,key))
+        k = r.fetchall()
+        return k[0][0] if k else None
+
+    async def kvstore_set_value(self, key, value):
+        c = self.bot.conn.cursor()
+        r = c.execute("""
+        INSERT OR REPLACE INTO plugin_data(pluginid,key,value)
+        VALUES (?,?,?)
+        """, (self.pluginid,key,value))
+        self.bot.conn.commit()
+    
+    async def kvstore_rem_value(self, key):
+        c = self.bot.conn.cursor()
+        r = c.execute("""
+        DELETE FROM plugin_data
+        WHERE pluginid=? and key=?
+        """, (self.pluginid,key))
+        self.bot.conn.commit()
+
+    #=============================================
     # Plugin helper functions (misc)
     #==============================================
     @staticmethod
