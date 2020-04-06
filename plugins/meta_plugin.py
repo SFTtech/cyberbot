@@ -6,7 +6,7 @@ HELP_DESC = ("""
 !addplugin plugin [plugin2 ...]\t-\tadd plugin(s)
 !remplugin plugin [plugin2 ...]\t-\tremove plugin(s)
 !reload\t\t\t\t-\tReload plugins
-"""[1:-1])
+""")
 
 
 blacklisted = ["help" "meta"]
@@ -51,9 +51,12 @@ async def register_to(plugin):
 
 
     async def reload_callback(room, event):
-        await plugin.room.bot.read_plugins() # look for new available plugins
-        # TODO: shutdown background processes
-        await plugin.send_text("Reloaded Plugins.")
+        # if some plugins are still in the register_to funciton, they will not
+        # be stopped :(
+        await plugin.mroom.bot.read_plugins() # look for new available plugins
+        await asyncio.gather(*(p.stop_all_tasks() for p in plugin.mroom.plugins)) # stop running tasks
+        await plugin.mroom.load_plugins()
+        # await plugin.send_text("Reloaded Plugins.")
 
     reload_handler = MCommandHandler("reload", reload_callback)
     plugin.add_handler(reload_handler)

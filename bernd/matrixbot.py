@@ -214,12 +214,6 @@ credentials""")
                 logging.debug("Ignoring old event")
                 return
 
-            if event.source['content']['body'].startswith("!reload"):
-                logging.info("Reloading plugins...")
-                raise Exception("TODO")
-                await self.read_plugins()
-                return
-
             if event.sender == self.client.user:
                 logging.debug("Ignoring own message")
                 return
