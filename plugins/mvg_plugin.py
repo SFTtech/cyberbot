@@ -5,7 +5,7 @@ import json
 
 HELP_DESC = ("!{mvg,mvv} <minutes>\t\t-\tDisplay Forschungszentrum depatures")
 
-def register_to(bot):
+async def register_to(bot):
 
 
     async def mvg_callback(room, event):

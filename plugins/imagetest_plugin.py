@@ -4,7 +4,7 @@ import random
 
 HELP_DESC = ("!imagetest\t\t-\tSend back test image\n")
 
-def register_to(plugin):
+async def register_to(plugin):
 
     # Echo back the given command
     async def imagetest_callback(room, event):

@@ -9,9 +9,7 @@ HELP_DESC = ("""
 """[1:-1])
 
 
-blacklisted = ["help" "meta"]
-
-def register_to(plugin):
+async def register_to(plugin):
 
     async def addval_callback(room, event):
         args = plugin.extract_args(event)

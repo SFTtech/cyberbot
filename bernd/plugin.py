@@ -19,6 +19,8 @@ class Plugin:
         self.bot = mroom.bot
         self.client = mroom.bot.client
 
+        self.tasks = set()
+
     async def load(self):
         filename = self.pluginname + "_plugin.py"
         plugin_path = Path(self.mroom.bot.plugindir).resolve()
@@ -30,7 +32,7 @@ class Plugin:
             try:
                 self.module = loader.load_module(modname)
                 self.module.ENVIRONMENT = self.mroom.bot.environment.copy()
-                self.module.register_to(self)
+                await self.module.register_to(self)
                 return True
             except Exception as e:
                 logging.warning(str(e))
@@ -60,6 +62,10 @@ class Plugin:
         totrigger = compress(self.handlers,self.handler_results)
         for handler in totrigger:
             await handler.handle_callback(self.mroom, event)
+
+    async def stop_all_tasks(self):
+        await asyncio.gather(*(self.stop_task(t) for t in self.tasks))
+        #self.tasks = set()
 
 
     #=============================================
@@ -189,6 +195,43 @@ class Plugin:
         WHERE pluginid=? and key=?
         """, (self.pluginid,key))
         self.bot.conn.commit()
+
+
+    #=============================================
+    # Plugin helper functions (tasks)
+    #==============================================
+    async def start_task(self, f, interval=10, delay=0, cleanup=None):
+        """
+        run f every interval seconds with a beginning delay of delay seconds
+        """
+        async def run_every():
+            try:
+                await asyncio.sleep(delay)
+                while True:
+                    await f()
+                    await asyncio.sleep(interval)
+            except asyncio.CancelledError:
+                if cleanup:
+                    await cleanup()
+                self.tasks.remove(t)
+                raise asyncio.CancelledError
+
+        t = asyncio.create_task(run_every())
+        self.tasks.add(t)
+        return t
+
+
+    async def stop_task(self, task):
+        if not task.done():
+            task.cancel()
+        try:
+            await asyncio.wait_for(task,10)
+        except asyncio.CancelledError:
+            pass
+        finally:
+            if task in self.tasks:
+                self.tasks.remove(task)
+
 
     #=============================================
     # Plugin helper functions (misc)

@@ -6,7 +6,7 @@ rss_token = ""
 
 HELP_DESC = ("!issue\t\t\t\t\t\t-\tThe bot will post a random open issue from the cyber group")
 
-def register_to(bot):
+async def register_to(bot):
 
     def issue_callback(room, event):
 

@@ -11,7 +11,7 @@ HELP_DESC = ("""
 
 blacklisted = ["help" "meta"]
 
-def register_to(plugin):
+async def register_to(plugin):
     """
     TODO: don't add plugins twice, don't remove meta plugin etc
     """
@@ -39,9 +39,9 @@ def register_to(plugin):
 
 
     async def remplugin_callback(room, event):
-        args = event.source['content']['body'].split()
+        args = plugin.extract_args(event)
 
-        torem = list(args[1:].filter(lambda x: x not in blacklisted))
+        torem = list(filter(lambda x: x not in blacklisted, args[1:]))
 
         await asyncio.gather(*(plugin.mroom.remove_plugin(pname) for pname in torem))
         await plugin.send_text("Call !help to see new plugins")

@@ -12,7 +12,7 @@ def get_stats():
     return j
 
 
-def register_to(plugin):
+async def register_to(plugin):
 
     #async def get_corona_stats()
 

@@ -111,4 +111,5 @@ class MatrixRoom():
             WHERE roomid=? AND pluginname=?;
             """, (self.room_id, pluginname))
             self.bot.conn.commit()
+            await self.plugins[indizes[0]].stop_all_tasks()
             del self.plugins[indizes[0]]

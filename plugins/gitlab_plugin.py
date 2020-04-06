@@ -65,5 +65,5 @@ class RSSGitlabFeed:
                     ignore_unverified_devices=True)
 
 
-def register_to(plugin):
+async def register_to(plugin):
     feedreader = RSSGitlabFeed(plugin)

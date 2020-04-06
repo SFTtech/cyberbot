@@ -142,7 +142,7 @@ async def send_mensadata(plugin, location, date):
 
 
 
-def register_to(plugin):
+async def register_to(plugin):
     async def mensa_callback(room, event):
         args = plugin.extract_args(event)
         location,date = parse_args(args)
