@@ -62,7 +62,7 @@ async def register_to(plugin):
         async def update_from_feed(self, feed, last_n=-1):
             if last_n != -1:
                 feed['entries'].sort(key=lambda x: x.updated_parsed)
-                es = list(reversed(feed['entries']))[:first_n]
+                es = list(reversed(feed['entries']))[:last_n]
             else:
                 es = list(reversed(feed['entries']))
             for entry in es:
