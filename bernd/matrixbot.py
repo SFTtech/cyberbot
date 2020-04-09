@@ -155,22 +155,6 @@ credentials""")
                     logging.warning(e)
 
 
-    def add_handler(self, handler):
-        """
-        should be called by plugins when registering bot
-        """
-        self.handlers.append(handler)
-
-
-#    async def listen(self):
-#        try:
-#            await self.listen2()
-#        except KeyboardInterrupt:
-#            print("hallo")
-#        finally:
-#            self.conn.close()
-#            print("hllo")
-
     async def listen(self):
 
         async def handle_invite_event(room, event):
@@ -212,16 +196,6 @@ credentials""")
                 await matching_rooms[0].handle_text_event(event)
             else:
                 logging.info("Ignoring text event in non-active room")
-
-
-#            for handler in self.handlers:
-#                try:
-#                    if handler.test_callback(room, event.source):
-#                        logging.info("A handler was triggered")
-#                        await handler.handle_callback(m_room, event.source)
-#                except Exception as e:
-#                    await m_room.send_html(f"<pre><code>{traceback.format_exc()}</code></pre>")
-#                    logging.warning(traceback.format_exc())
 
         async def event_cb(room, *args):
             """
@@ -290,97 +264,4 @@ credentials""")
                 await self.introduce_bot(room_id)
 
         await self.client.sync_forever(30000)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# ======================================================================
-    async def join_rooms(self, rooms):
-        """
-        NOT NEEDED ANYMORE
-        """
-        self.ok_rooms = rooms # we will accept invites from these rooms
-        joined_rooms = await self.get_joined_rooms()
-        self.active_rooms.update(set(joined_rooms))
-        joined_names = [self.client.rooms[rid].display_name
-                if rid in self.client.rooms
-                else rid
-                for rid in joined_rooms]
-        logging.debug("Already joined following rooms:\n\t\t{}"\
-                .format("\n\t\t".join(joined_names)))
-
-
-        tojoin_rooms = [room for room in rooms if room not in joined_rooms]
-        #unused_rooms = [room for room in joined_rooms if room not in rooms]
-        unused_rooms = []
-
-        r = await asyncio.gather(*(self.client.join(room) for room in tojoin_rooms))
-        k = list(zip(tojoin_rooms, r))
-        if any(type(response) == nio.JoinError for _,response in k):
-            logging.warning("There was an Error joining these rooms:\n\t\t{}"\
-                    .format("\n\t\t".join(f"{room}: {response.message}"
-                for room,response in k if type(response) == nio.JoinError)))
-
-        self.active_rooms.update(set(room for room,response in k if type(response != nio.JoinError)))
-
-        if unused_rooms:
-            logging.info("Leaving already old rooms...")
-            await asyncio.gather(*(self.client.room_leave(room) for room in unused_rooms))
-
-        joined_rooms = await self.get_joined_rooms()
-        joined_names = [self.client.rooms[rid].display_name
-                if rid in self.client.rooms
-                else rid
-                for rid in joined_rooms]
-        logging.info("Active rooms:\n\t\t{}"\
-                .format("\n\t\t".join(joined_names)))
-
-        if (await self.client.get_displayname()) != self.botname:
-            logging.info(f"Setting Displayname to {self.botname}...")
-            await self.client.set_displayname(self.botname)
-
-
-
-
-
-
-
-
-    async def get_joined_rooms(self):
-        """
-        Not needed anymore
-        """
-        response = await self.client.joined_rooms()
-        if type(response) == nio.JoinedRoomsError:
-            logging.error(f"""There was an error fetching joined
-rooms: {response.message}""")
-            sys.exit(-1)
-        return response.rooms
 
