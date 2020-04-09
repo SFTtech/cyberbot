@@ -176,14 +176,6 @@ credentials""")
 #            print("hllo")
 
     async def listen(self):
-        might_use_old_api = False # currently unused
-        try:
-            import matrix_bot_api.mhandler
-            might_use_old_api = True
-        except ModuleNotFoundError:
-            might_use_old_api = False
-            pass
-
 
         async def handle_invite_event(room, event):
             try:

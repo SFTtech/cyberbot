@@ -1,4 +1,3 @@
-from matrix_bot_api.mcommand_handler import MCommandHandler
 import asyncio
 
 HELP_DESC = ("""
@@ -19,7 +18,7 @@ async def register_to(plugin):
                 await plugin.send_text(args[1])
             cur_task = await plugin.start_repeating_task(k,10)
             
-    startecho_handler = MCommandHandler("startecho", startecho_callback)
+    startecho_handler = plugin.CommandHandler("startecho", startecho_callback)
     plugin.add_handler(startecho_handler)
 
 
@@ -29,5 +28,5 @@ async def register_to(plugin):
             await plugin.stop_task(cur_task)
             cur_task = None
 
-    stopecho_handler = MCommandHandler("stopecho", stopecho_callback)
+    stopecho_handler = plugin.CommandHandler("stopecho", stopecho_callback)
     plugin.add_handler(stopecho_handler)

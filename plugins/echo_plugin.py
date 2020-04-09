@@ -1,5 +1,3 @@
-from matrix_bot_api.mcommand_handler import MCommandHandler
-
 HELP_DESC = ("!echo\t\t\t-\tEcho back the given string\n")
 
 async def register_to(plugin):
@@ -12,5 +10,5 @@ async def register_to(plugin):
         await plugin.send_text(event.source['sender'] + ': ' + ' '.join(args))
 
     # Add a command handler waiting for the echo command
-    echo_handler = MCommandHandler("echo", echo_callback)
+    echo_handler = plugin.CommandHandler("echo", echo_callback)
     plugin.add_handler(echo_handler)

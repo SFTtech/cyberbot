@@ -1,4 +1,3 @@
-from matrix_bot_api.mcommand_handler import MCommandHandler
 import os
 import random
 
@@ -13,5 +12,5 @@ async def register_to(plugin):
         await plugin.send_image(random.choice(list(images)))
 
     # Add a command handler waiting for the echo command
-    imagetest_handler = MCommandHandler("imagetest", imagetest_callback)
+    imagetest_handler = plugin.CommandHandler("imagetest", imagetest_callback)
     plugin.add_handler(imagetest_handler)

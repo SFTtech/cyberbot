@@ -33,7 +33,7 @@ class MatrixRoom():
 
 
     async def handle_text_event(self, event):
-        results = await asyncio.gather(*(p.test_callback(event.source)
+        results = await asyncio.gather(*(p.test_callback(event)
             for p in self.plugins))
         await asyncio.gather(*(p.handle_callback(event)
             for p in compress(self.plugins,results)))

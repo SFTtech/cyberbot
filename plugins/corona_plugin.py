@@ -1,7 +1,6 @@
 import json
 import requests
 
-from matrix_bot_api.mcommand_handler import MCommandHandler
 
 HELP_DESC = ("!corona\t\t\t-\tShow Coronavirus stats\n")
 
@@ -35,5 +34,5 @@ async def register_to(plugin):
         await plugin.send_html(html)
 
     # Add a command handler waiting for the corona command
-    corona_handler = MCommandHandler("corona", corona_callback)
+    corona_handler = plugin.CommandHandler("corona", corona_callback)
     plugin.add_handler(corona_handler)

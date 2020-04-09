@@ -1,4 +1,3 @@
-from matrix_bot_api.mcommand_handler import MCommandHandler
 import asyncio
 
 HELP_DESC = ("""
@@ -25,7 +24,7 @@ async def register_to(plugin):
 
         await plugin.send_html(f"""<pre><code>{pluginlist}</pre></code>""")
             
-    listplugins_handler = MCommandHandler("listplugins", listplugins_callback)
+    listplugins_handler = plugin.CommandHandler("listplugins", listplugins_callback)
     plugin.add_handler(listplugins_handler)
 
 
@@ -34,7 +33,7 @@ async def register_to(plugin):
         await asyncio.gather(*(plugin.mroom.add_plugin(pname) for pname in args[1:]))
         await plugin.send_text("Call !help to see new plugins")
 
-    addplugin_handler = MCommandHandler("addplugin", addplugin_callback)
+    addplugin_handler = plugin.CommandHandler("addplugin", addplugin_callback)
     plugin.add_handler(addplugin_handler)
 
 
@@ -46,7 +45,7 @@ async def register_to(plugin):
         await asyncio.gather(*(plugin.mroom.remove_plugin(pname) for pname in torem))
         await plugin.send_text("Call !help to see new plugins")
 
-    remplugin_handler = MCommandHandler("remplugin", remplugin_callback)
+    remplugin_handler = plugin.CommandHandler("remplugin", remplugin_callback)
     plugin.add_handler(remplugin_handler)
 
 
@@ -58,5 +57,5 @@ async def register_to(plugin):
         await plugin.mroom.load_plugins()
         # await plugin.send_text("Reloaded Plugins.")
 
-    reload_handler = MCommandHandler("reload", reload_callback)
+    reload_handler = plugin.CommandHandler("reload", reload_callback)
     plugin.add_handler(reload_handler)

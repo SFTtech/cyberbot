@@ -1,7 +1,6 @@
 argparse
 configparser
 importlib2
-matrix_bot_api
 pathlib
 PyMVGLive
 feedparser

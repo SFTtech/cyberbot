@@ -1,4 +1,3 @@
-from matrix_bot_api.mcommand_handler import MCommandHandler
 import feedparser
 from random import choice
 
@@ -28,5 +27,5 @@ async def register_to(bot):
                        description + "\n" +
                        link)
 
-    issue_handler = MCommandHandler("issue", issue_callback)
+    issue_handler = plugin.CommandHandler("issue", issue_callback)
     bot.add_handler(issue_handler)

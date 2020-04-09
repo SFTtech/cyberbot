@@ -1,4 +1,3 @@
-from matrix_bot_api.mcommand_handler import MCommandHandler
 
 HELP_DESC = ("!help\t\t\t-\tDisplay this help message")
 
@@ -19,5 +18,5 @@ async def register_to(plugin):
         #print(dir(room))
         await plugin.send_html(formatted_help, help_txt)
 
-    help_handler = MCommandHandler("help", help_callback)
+    help_handler = plugin.CommandHandler("help", help_callback)
     plugin.add_handler(help_handler)

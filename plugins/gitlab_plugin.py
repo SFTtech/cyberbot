@@ -1,4 +1,3 @@
-from matrix_bot_api.mcommand_handler import MCommandHandler
 import re
 import feedparser
 import dbm.ndbm
@@ -191,7 +190,7 @@ Available subcommands:
 
     # Add a command handler waiting for the echo command
     await load_feeds()
-    gitlab_handler = MCommandHandler("gitlab", gitlab_callback)
+    gitlab_handler = plugin.CommandHandler("gitlab", gitlab_callback)
     plugin.add_handler(gitlab_handler)
 
     #feedreader = RSSGitlabFeed(plugin)

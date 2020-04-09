@@ -1,4 +1,3 @@
-from matrix_bot_api.mcommand_handler import MCommandHandler
 #requires this package
 import MVGLive
 import json
@@ -26,8 +25,8 @@ async def register_to(bot):
                      "</strong> in <strong>"+ str(int(i["time"])) + "</strong> "+ ("minute" if int(i["time"])<=1 else "minutes") +".<br>"
         await room.send_html(outText)
 
-    mvg_handler = MCommandHandler("mvg", mvg_callback)
+    mvg_handler = plugin.CommandHandler("mvg", mvg_callback)
     bot.add_handler(mvg_handler)
 
-    mvv_handler = MCommandHandler("mvv", mvg_callback)
+    mvv_handler = plugin.CommandHandler("mvv", mvg_callback)
     bot.add_handler(mvv_handler)

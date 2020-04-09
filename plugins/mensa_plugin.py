@@ -3,7 +3,6 @@ import requests
 import json
 import datetime
 
-from matrix_bot_api.mcommand_handler import MCommandHandler
 from pprint import pprint
 from collections import defaultdict
 
@@ -149,7 +148,7 @@ async def register_to(plugin):
         await send_mensadata(plugin, location, date)
 
     # Add a command handler waiting for the echo command
-    mensa_handler = MCommandHandler("mensa", mensa_callback)
+    mensa_handler = plugin.CommandHandler("mensa", mensa_callback)
     plugin.add_handler(mensa_handler)
 
 

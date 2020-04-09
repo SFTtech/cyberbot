@@ -15,19 +15,6 @@ let
       doCheck = false;
     };
 
-    matrix-bot-api = with ps; buildPythonPackage rec {
-      pname = "matrix_bot_api";
-      version = "0.1";
-      propagatedBuildInputs = [ matrix-client ];
-      src = fetchFromGitHub {
-        owner = "shawnanastasio";
-        repo = "python-matrix-bot-api";
-        rev = "962941c1ae7adec9330b4ce27e15482ac20ae1dd";
-        sha256 = "18p1j7n1czp25qdzddz9b59br28akq05lg6ci711387bf58952r5";
-      };
-      doCheck = false;
-    };
-
     matrix-nio = with ps; buildPythonPackage rec {
       pname = "matrix-nio";
       version = "0.9.0";
@@ -55,7 +42,6 @@ let
 
   in [
     matrix-nio
-    matrix-bot-api
     PyMVGLive
     feedparser
   ];

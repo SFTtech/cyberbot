@@ -5,6 +5,7 @@ import importlib
 import pathlib
 import shlex
 import traceback
+import re
 
 from itertools import compress
 from pathlib import Path
@@ -70,6 +71,31 @@ class Plugin:
         #self.tasks = set()
 
 
+
+
+    #=============================================
+    # Plugin helper (Command Handlers)
+    #==============================================
+    class RegexHandler:
+        """
+        given a regex and a function, the function will be called,
+        whenever a message matches the regex
+        """
+        def __init__(self, regexstring, handle_callback):
+            self.re = re.compile(regexstring)
+            self.handle_callback = handle_callback
+
+        def test_callback(self, room, event):
+            if event.source['type'] == 'm.room.message':
+                return self.re.match(event.source['content']['body'])
+
+    class CommandHandler(RegexHandler):
+        """
+        given a string s and a function, the function will be called,
+        whenever !s is written at the start of a message
+        """
+        def __init__(self, commandstring, handle_callback):
+            super().__init__(r'^!' + commandstring + '.*', handle_callback)
 
 
     #=============================================

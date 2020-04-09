@@ -1,4 +1,3 @@
-from matrix_bot_api.mcommand_handler import MCommandHandler
 import asyncio
 
 HELP_DESC = ("""
@@ -18,7 +17,7 @@ async def register_to(plugin):
             val = args[2]
             await plugin.kvstore_set_value(key,val)
             
-    addval_handler = MCommandHandler("addval", addval_callback)
+    addval_handler = plugin.CommandHandler("addval", addval_callback)
     plugin.add_handler(addval_handler)
 
 
@@ -29,7 +28,7 @@ async def register_to(plugin):
             r = await plugin.kvstore_get_value(key)
         await plugin.send_text(str(r));
 
-    getval_handler = MCommandHandler("getval", getval_callback)
+    getval_handler = plugin.CommandHandler("getval", getval_callback)
     plugin.add_handler(getval_handler)
 
 
@@ -41,7 +40,7 @@ async def register_to(plugin):
             r = await plugin.kvstore_rem_value(key)
         await plugin.send_text(str(r));
 
-    remval_handler = MCommandHandler("remval", remval_callback)
+    remval_handler = plugin.CommandHandler("remval", remval_callback)
     plugin.add_handler(remval_handler)
 
 
@@ -49,5 +48,5 @@ async def register_to(plugin):
         r = await plugin.kvstore_get_keys()
         await plugin.send_text(" ".join(r));
 
-    getkeys_handler = MCommandHandler("getkeys", getkeys_callback)
+    getkeys_handler = plugin.CommandHandler("getkeys", getkeys_callback)
     plugin.add_handler(getkeys_handler)
