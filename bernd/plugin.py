@@ -4,6 +4,7 @@ import logging
 import importlib
 import pathlib
 import shlex
+import traceback
 
 from itertools import compress
 from pathlib import Path
@@ -35,6 +36,7 @@ class Plugin:
                 await self.module.register_to(self)
                 return True
             except Exception as e:
+                traceback.print_exc()
                 logging.warning(str(e))
                 return False
         else:
@@ -66,6 +68,8 @@ class Plugin:
     async def stop_all_tasks(self):
         await asyncio.gather(*(self.stop_task(t) for t in self.tasks))
         #self.tasks = set()
+
+
 
 
     #=============================================
@@ -200,7 +204,7 @@ class Plugin:
     #=============================================
     # Plugin helper functions (tasks)
     #==============================================
-    async def start_task(self, f, interval=10, delay=0, cleanup=None):
+    async def start_repeating_task(self, f, interval=10, delay=0, cleanup=None):
         """
         run f every interval seconds with a beginning delay of delay seconds
         """
@@ -217,6 +221,12 @@ class Plugin:
                 raise asyncio.CancelledError
 
         t = asyncio.create_task(run_every())
+        self.tasks.add(t)
+        return t
+
+
+    async def start_task(f):
+        t = asyncio.create_task(f)
         self.tasks.add(t)
         return t
 

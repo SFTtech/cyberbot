@@ -46,7 +46,7 @@ async def register_to(plugin):
                         await self.update_from_feed(feed)
                 except Exception as e:
                     print(e)
-            self.task = await plugin.start_task(check_for_changes,INTERVAL)
+            self.task = await plugin.start_repeating_task(check_for_changes,INTERVAL)
 
 
         async def stop(self):
