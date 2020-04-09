@@ -26,7 +26,6 @@ class MatrixBot:
             server,
             botname="Matrix Bot",
             deviceid="MATRIXBOT",
-            adminusers=[],
             dbpath="./matrixbot.sqlite",
             plugindir="plugins",
             store_path=None,
@@ -52,7 +51,6 @@ class MatrixBot:
         self.password = password
         self.botname = botname
 
-        self.adminusers = adminusers
         self.dbpath = dbpath
         self.load_db(dbpath)
         self.plugindir = plugindir
@@ -60,8 +58,6 @@ class MatrixBot:
         self.last_sync_time = 0
 
         self.active_rooms = set()
-
-        logging.info("Admins: {}".format(" ".join(adminusers)))
 
 
     async def login(self):
@@ -377,46 +373,6 @@ credentials""")
 
 
 
-
-
-
-
-                    # collect plugin help texts
-#                    help_text_arr = module.HELP_DESC.split('\n') # allow multiple desc
-#                    for h in help_text_arr:
-#                        help_desc.append(h)
-#
-#
-#                    module.TRUSTED_ROOMS = self.ok_rooms.copy()    # Trusted rooms to join
-#                    module.ENVIRONMENT = self.environment.copy()
-#
-#                    # skip help module, collect all help texts before registering
-#                    if (modname == 'plugins.help_plugin'):
-#                        help_module = module
-#                        help_modname = modname
-#                    else:
-#                        module.register_to(self)
-#                        logging.info(f"  [+] {modname} loaded")
-#                except ImportError as e:
-#                    logging.info(f"  [!] {modname} not loaded: {str(e)}")
-#        # Build the help message from the collected plugin description fragments
-#        help_txt = '\n'.join([
-#                f"{self.botname} Commands and Capabilities",
-#                '-' * 80,
-#                '',
-#                ] + [ e for e in sorted(help_desc) if e != '' ])
-#
-#        with open('help_text', 'w') as f:
-            #f.write(help_txt)
-
-        # load the help module after all help texts have been collected
-        #help_module.register_to(self)
-        #logging.info(f"  [+] {help_modname} loaded")
-
-        # Start polling and save a handle to the child thread
-        #child_thread = bot.start_polling()
-
-
     async def get_joined_rooms(self):
         """
         Not needed anymore
@@ -428,18 +384,3 @@ rooms: {response.message}""")
             sys.exit(-1)
         return response.rooms
 
-
-#        async def handle_invite_event(room, event):
-#            if (room.room_id in self.ok_rooms or \
-#                    event.sender in self.adminusers) and \
-#                    room.room_id not in await self.get_joined_rooms():
-#                logging.info(f"Try joining room {room.room_id}")
-#                # TODO: check return
-#                await asyncio.sleep(0.5)
-#                response = await self.client.join(room.room_id)
-#                if type(response) == nio.JoinResponse:
-#                    await self.introduce_bot(room.room_id)
-#            else:
-#                logging.warning(f"Not joining room {room.room_id}")
-#                logging.warning(f"Room not trusted or user not admin")
-#

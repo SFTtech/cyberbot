@@ -47,7 +47,7 @@ async def main():
 
     if not 'BotMatrixId' in config \
         or not all(key in config['BotMatrixId']
-                for key in ['USERNAME','PASSWORD','SERVER','ROOMS']):
+                for key in ['USERNAME','PASSWORD','SERVER']):
         sys.stderr.write("""Bad config file. Please check that
 config file exists and all fields are available""")
         sys.exit(-1)
@@ -62,7 +62,6 @@ config file exists and all fields are available""")
     pluginpath = check_default("PLUGINPATH", DEFAULT_PLUGINPATH)
     deviceid   = check_default("DEVICEID", DEFAULT_DEVICEID)
     store_path = check_default("STOREPATH", "")
-    adminusers = list(filter(lambda x: x.strip(), check_default("ADMINUSERS", "").split(';')))
 
     environment = dict((k.upper(),v) for k,v in dict(vals).items()
                                      if k.lower() != 'password')
@@ -72,7 +71,6 @@ config file exists and all fields are available""")
             username,password,server,
             botname=DEFAULT_BOTNAME,
             deviceid=deviceid,
-            adminusers=adminusers,
             store_path=store_path,
             environment=environment,
             plugindir=pluginpath
