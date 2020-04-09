@@ -135,7 +135,6 @@ credentials""")
     async def read_plugins(self):
         plugin_path = Path(self.plugindir)
         logging.info("Reading available plugins from: {}".format(plugin_path))
-        #help_desc = ["!reload \t\t-\t reload plugins"]
 
         help_module = None
 
@@ -193,14 +192,27 @@ credentials""")
             matching_rooms = [mroom for mroom in self.active_rooms if
                     mroom.room_id == room.room_id]
             if matching_rooms:
-                await matching_rooms[0].handle_text_event(event)
+                try:
+                    await matching_rooms[0].handle_text_event(event)
+                except Exception as e:
+                    traceback.print_exc()
+                    logging.warning(e)
+                    try:
+                        k = traceback.format_exc()
+                        if "ADMIN" in self.environment:
+                            admin = self.environment['ADMIN']
+                            k += f"\nPlease contact {admin} for bug fixing"
+                        else:
+                            k += "\nPlease contact the plugin creator"
+                        self.nio_room = room
+                        await Plugin.send_text(self, k)
+                    except Exception as e:
+                        traceback.print_exc()
+                        logging.warning(e)
             else:
                 logging.info("Ignoring text event in non-active room")
 
         async def event_cb(room, *args):
-            """
-            TODO: add try catch and send exception text into room
-            """
             event = args[0]
             logging.debug(80 * "=")
             #pprint(vars(event))
