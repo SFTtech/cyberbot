@@ -95,7 +95,7 @@ class Plugin:
         whenever !s is written at the start of a message
         """
         def __init__(self, commandstring, handle_callback):
-            super().__init__(r'^!' + commandstring + '.*', handle_callback)
+            super().__init__(r'^!' + commandstring + '(\s.*)?$', handle_callback)
 
 
     #=============================================
