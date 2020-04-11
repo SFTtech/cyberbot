@@ -96,7 +96,7 @@ class MatrixRoom():
         r = c.execute("""
         SELECT last_insert_rowid();
         """)
-        pid, = r.fetchall()
+        (pid,), = r.fetchall()
 
         plugin = Plugin(self,pid,pluginname)
         await plugin.load()
