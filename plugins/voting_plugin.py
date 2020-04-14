@@ -6,12 +6,6 @@ from datetime import datetime
 
 HELP_DESC = ("!voting\t\t\t-\t(WIP)Voting subcommands\n")
 
-"""
-TODO: add deadline support via asyncio tasks
-"""
-
-
-
 
 
 async def register_to(plugin):
@@ -37,11 +31,13 @@ async def register_to(plugin):
                 duration=None,
                 votes=defaultdict(int),
                 voted=[],
-                creation=None):
+                creation=None,
+                voting=None):
             self.creator = creator
             self.name = name
             self.options = options
             self.duration = duration
+            self.voting = voting
 
             if not creation:
                 self.creation = int(time.time())
@@ -50,6 +46,7 @@ async def register_to(plugin):
 
             self.voted = voted
             self.votes = votes
+            self.task = None
 
 
         async def add_vote(self, user, option):
@@ -64,7 +61,10 @@ async def register_to(plugin):
             res = f"Pollname: {self.name}\nTotal votes: {len(self.voted)}"
             res += f"\nCreated by {self.creator} on {datetime.fromtimestamp(self.creation)}"
             if self.duration:
-                res += f"\nduration: {self.duration}, time left: {None}"
+                lef = self.duration - (int(time.time())-self.creation)
+                if lef < 0:
+                    lef = None
+                res += f"\nduration: {self.duration}, time left: {lef}"
             res += f"\n#votes    option"
             opts = reversed(sorted(self.options, key=lambda o:self.votes[o]))
             for option in opts:
@@ -78,7 +78,8 @@ async def register_to(plugin):
             votes = [self.votes[o] for o in self.options]
             return [self.name,self.creator,str(self.duration),self.voted,self.options,votes, self.creation]
 
-        def from_list(l):
+
+        async def from_list(l):
             print(l)
             name,creator,duration,voted,options,votes,creation = l
             vs = defaultdict(int)
@@ -89,8 +90,37 @@ async def register_to(plugin):
             for (o,v) in zip(options,votes):
                 vs[o] = v
             p = Poll(creator, name, options, duration, vs, voted, creation)
+            if p.duration is not None:
+                await p.start_timer()
             return p
             
+
+        async def start_timer(self):
+
+            async def cleanup():
+                print("In clenaup")
+                await self.voting.close_poll(self.name)
+                print("Save")
+                await self.voting.save()
+                if self.creation + self.duration <= int(time.time()):
+                    t = f"Poll Deadline\n"
+                else:
+                    t = ""
+                t += f"Results\n=====================\n{self}"
+                await plugin.send_text(t)
+
+            async def check():
+                print("checking..")
+                if self.creation + self.duration <= int(time.time()):
+                    if self.task is not None:
+                        print("Triggering cancel")
+                        self.task.cancel()
+                        self.task = None
+                    else:
+                        print("Task is None")
+
+            self.task = await plugin.start_repeating_task(check, cleanup=cleanup)
+
 
 
 
@@ -99,6 +129,8 @@ async def register_to(plugin):
 
         def __init__(self, active_polls=[], onlyadmincreators=False):
             self.active_polls = active_polls
+            for poll in self.active_polls:
+                poll.voting = self
             self.onlyadmincreators = onlyadmincreators
 
         @classmethod
@@ -109,7 +141,7 @@ async def register_to(plugin):
                 active_polls = []
             else:
                 j = json.loads(await plugin.kvstore_get_value("active_polls"))
-                active_polls = [Poll.from_list(l) for l in j]
+                active_polls = [await Poll.from_list(l) for l in j]
 
             if "onlyadmincreators" not in keys:
                 onlyadmincreators = False
@@ -127,12 +159,15 @@ async def register_to(plugin):
             await plugin.kvstore_set_value("onlyadmincreators", str(self.onlyadmincreators))
 
 
-        def add_poll(self, creator, name, options, duration=None):
+        async def add_poll(self, creator, name, options, duration=None):
             if any(poll.name == name for poll in self.active_polls):
                 return None
-            p = Poll(creator,name,options,duration)
+            p = Poll(creator,name,options,duration,voting=self)
+            if duration is not None:
+                await p.start_timer()
             self.active_polls.append(p)
             return p
+
 
         def get_poll(self, name):
             p = [(i,poll) for (i,poll) in enumerate(self.active_polls) if poll.name == name]
@@ -140,14 +175,18 @@ async def register_to(plugin):
                 return None
             return p[0]
         
+
         async def close_poll(self, name):
             p = self.get_poll(name)
             if not p:
                 return None
             else:
                 i,poll = p
+                if poll.task is not None:
+                    poll.task.cancel()
                 del self.active_polls[i]
                 return poll
+
 
         async def vote(self, name, option, sender):
             p = self.get_poll(name)
@@ -156,7 +195,6 @@ async def register_to(plugin):
             i,poll = p
             return await poll.add_vote(sender, option)
             
-
 
         def __str__(self):
             res = f"number of running polls: {len(self.active_polls)}\n\n"
@@ -209,7 +247,7 @@ async def register_to(plugin):
                 if len([o1 for o1 in options for o2 in options if o1 == o2]) != len(options):
                     await plugin.send_text("Invalid: two options have the same name")
                 else:
-                    poll = voting.add_poll(event.sender, name, options, duration)
+                    poll = await voting.add_poll(event.sender, name, options, duration)
                     if poll:
                         await voting.save()
                         await plugin.send_text(f"Sucessfully created poll:\n{poll}")
@@ -223,7 +261,8 @@ async def register_to(plugin):
             else:
                 p = await voting.close_poll(args[1])
                 if p:
-                    await plugin.send_text(f"Results\n=====================\n{p}")
+                    if p.duration is None:
+                        await plugin.send_text(f"Results\n=====================\n{p}")
                     await voting.save()
                 else:
                     pass
