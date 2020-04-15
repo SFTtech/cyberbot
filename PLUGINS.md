@@ -8,11 +8,14 @@ explaining the plugin.
 
 Furthermore, an asyncio function `register_to(plugin)` has to be defined.
 
+
 The `plugin` argument exposes a lot of functionality via helper-functions, e.g.:
-	- Handler Constructors
-	- room interaction (`send_text`, `send_image`, ...)
-	- a persistent key-value store
-	- functions for creating asyncio task
+
+- Handler Constructors
+- room interaction (`send_text`, `send_image`, ...)
+- a persistent key-value store
+- functions for creating asyncio task
+
 
 For more information look into the file bernd/plugin.py.
 
