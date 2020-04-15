@@ -50,18 +50,10 @@ class Plugin:
         self.handlers.append(handler)
 
     async def test_callback(self, event):
-        """
-        TODO: change this architecture
-        TODO: add try catch and print to room
-        """
         self.handler_results = [handler.test_callback(self.mroom, event) for handler in self.handlers]
-        print(self.handlers)
         return any(self.handler_results)
     
     async def handle_callback(self, event):
-        """
-        TODO: add try catch and print to room
-        """
         totrigger = compress(self.handlers,self.handler_results)
         for handler in totrigger:
             await handler.handle_callback(self.mroom, event)
@@ -74,7 +66,7 @@ class Plugin:
 
 
     #=============================================
-    # Plugin helper (Command Handlers)
+    # Plugin helpers (Command Handlers)
     #==============================================
     class RegexHandler:
         """
@@ -151,7 +143,6 @@ class Plugin:
         if extension not in ["gif", "png", "jpg", "jpeg"]:
             raise Exception(f"Unsupported image format: {extension}")
         mime = "image/{}".format(extension.replace("jpeg", "jpg"))
-        #print(f"{mime=}")
         uresp,fdi = await self.client.upload(lambda x,y: filename,
                 content_type=mime,
                 filename=p.name,

@@ -1,5 +1,5 @@
 
-HELP_DESC = ("!help\t\t\t-\tDisplay this help message")
+HELP_DESC = ("!help\t\t\t-\tDisplay this help message\n")
 
 async def register_to(plugin):
     def format_help(text):

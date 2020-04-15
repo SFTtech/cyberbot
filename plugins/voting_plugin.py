@@ -4,7 +4,7 @@ import json
 import time
 from datetime import datetime
 
-HELP_DESC = ("!voting\t\t\t-\t(WIP)Voting subcommands\n")
+HELP_DESC = ("!voting\t\t\t-\tVoting subcommands\n")
 
 
 

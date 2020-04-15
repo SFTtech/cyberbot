@@ -11,7 +11,7 @@ from pprint import pprint
 
 INTERVAL = 5
 
-HELP_DESC = ("!gitlab\t\t\t-\tGitlab Feed Manager/Notifier")
+HELP_DESC = ("!gitlab\t\t\t-\tGitlab Feed Manager/Notifier\n")
 
 feeds = []
 

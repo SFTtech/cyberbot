@@ -2,13 +2,12 @@
 import MVGLive
 import json
 
-HELP_DESC = ("!{mvg,mvv} <minutes>\t\t-\tDisplay Forschungszentrum depatures")
+HELP_DESC = ("!{mvg,mvv} <minutes>\t\t-\tDisplay Forschungszentrum depatures\n")
 
-async def register_to(bot):
-
+async def register_to(plugin):
 
     async def mvg_callback(room, event):
-        args = event['content']['body'].split()
+        args = plugin.extract_args(event)
 
         m = MVGLive.MVGLive()
         #offest wurde als argument übergeben
@@ -23,10 +22,10 @@ async def register_to(bot):
         for i in depObj:
             outText+=i["product"] + " <strong>" + i["linename"] + "</strong>, Richtung <strong>" + i["destination"] + \
                      "</strong> in <strong>"+ str(int(i["time"])) + "</strong> "+ ("minute" if int(i["time"])<=1 else "minutes") +".<br>"
-        await room.send_html(outText)
+        await plugin.send_html(outText)
 
     mvg_handler = plugin.CommandHandler("mvg", mvg_callback)
-    bot.add_handler(mvg_handler)
+    plugin.add_handler(mvg_handler)
 
     mvv_handler = plugin.CommandHandler("mvv", mvg_callback)
-    bot.add_handler(mvv_handler)
+    plugin.add_handler(mvv_handler)
