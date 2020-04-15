@@ -1,26 +1,23 @@
 **Bernd Lauert**
 ----------------
 
-[Libolm v3](https://gitlab.matrix.org/matrix-org/olm) is needed.
-
 A matrix chatbot, originally designed for the [*StuStaNet
 e.V.*](http://vereinsanzeiger.stustanet.de/) administrator chatroom
 (#admins:stusta.de), written in python.
-Adopted for the RBG Cybergroup.
+Adopted for the RBG at TUM.
 
 **Requirements**:
 
 All required python modules are listed in the requirements.txt
 file. Furthermore the bot needs read and write permissions in the installation
 folder for correct execution.
+[Libolm v3](https://gitlab.matrix.org/matrix-org/olm) needs to be installed.
 
 **Execution**:
 
-Specify the login credentials for the bot, as well as target rooms to join, in
-the provided *config.ini* file. When specifying target rooms, the internal
-ID (`!suchalongidwehavehere:server.org`) must be used in order enable
-room-specific plugins. If specifying multiple rooms, the IDs need to be
-separated by a semicolon (';'). Quotes should be generally omitted in the file.
+Specify the login credentials and server for the bot, in
+the provided *config.ini* file.
+Quotes should be generally omitted in the file.
 
 After the bot has been configured, issue:
 
@@ -28,55 +25,28 @@ After the bot has been configured, issue:
 python bernd -c <config_file>
 ```
 
-**Structure**:
+To add the bot to a room, invite it via your matrix client. The bot will join
+automatically.
 
-The bot itself only uses the basic functionality of the `matrix_bot_api` module
-to establish a matrix connection. All higher functionality is implemented in
-*plugin files*. These plugins need to be located in the *plugins* folder.
-
-Every plugin needs to define a `register_to(bot)` function, which is called upon
-plugin loading, and a `HELP_DESC` variable, containing a string with a short
-textual description of its features.
-
-For interaction with matrix services, respective modules need to be imported.
-Consider this short example of an echo plugin for demonstration purposes:
-
-```python
-from matrix_bot_api.mcommand_handler import MCommandHandler
-
-# Define a HELP_DESC, which describes the new functionality
-HELP_DESC = ("!echo\t\t-\tEcho back the given string\n")
-
-# plugin loading function, executed upon startup
-def register_to(bot):
-
-    # Callback functions, registered with MCommandHandler/MRegexHandler are
-    # provided with a matrix room object, in which the event has been received,
-    # and the event data itself. Events in matrix are JSON objects and can be
-    # easily accessed as follows:   json_value = event['json_key']
-    def echo_callback(room, event):
-        args = event['content']['body'].split()
-        args.pop(0)
-
-        # Interaction with matrix is conducted through the room object. Consider
-        # the documentation of matrix_client.client/api for further information
-        room.send_text(event['sender'] + ': ' + ' '.join(args))
-
-    # Add a command handler waiting for the echo command
-    # This command handler reacts upon the command "!echo" and then invokes
-    # the echo_callback function defined above
-    echo_handler = MCommandHandler("echo", echo_callback)
-
-    # register the handler with the running bot
-    bot.add_handler(echo_handler)
-```
-
-Newly written plugins are loaded automatically once they are placed in the
-plugins folder and fulfill all specified requirements.
 
 **Commands**:
 
 As the functionality of the bot depends heavily on the installed plugins, use
-the `!help` command, in order to display the currently available features. The
-displayed configuration is automatically generated at bot startup from the
-plugin description texts.
+the `!help` command, in order to display the currently available features.
+Use `!listplugins` to see all available plugins and use `!addplugin` to add one
+of them into your room.
+
+
+**Structure**:
+
+The bot itself only uses the basic functionality of the `matrix-nio` module
+to establish a matrix connection. All higher functionality is implemented in
+*plugin files*. These plugins need to be located in the *plugins* folder.
+
+Every plugin needs to define a `register_to(plugin)` function, which is called upon
+plugin loading, and a `HELP_DESC` variable, containing a string with a short
+textual description of its features.
+
+
+**Plugins**:
+See [./PLUGINS.md](PLUGINS.md).
