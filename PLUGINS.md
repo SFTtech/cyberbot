@@ -2,7 +2,9 @@
 ----------------
 
 Plugins are python files which are located in the `plugins` folder.
+
 They must end in `.py` to be recognized by the bot.
+
 Each plugin must contain a global `HELP_DESC` variable with a short string
 explaining the plugin.
 
@@ -18,6 +20,12 @@ The `plugin` argument exposes a lot of functionality via helper-functions, e.g.:
 
 
 For more information look into the file bernd/plugin.py.
+
+Plugins operate on a room level, meaning that each room that adds your plugin
+will load an own instance of your plugin's module.
+This has the consequence that the key-value store is module-instance specific
+and other ways of storing persistant data need to be protected from sharing between
+the instances (except that's the goal).
 
 As the bot heavily uses python's `asyncio`, most functions create coroutines which
 must be awaited.
