@@ -1,4 +1,4 @@
-**Bernd Lauert**
+**Creating Plugins**
 ----------------
 
 Plugins are python files which are located in the `plugins` folder.
