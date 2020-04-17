@@ -61,7 +61,9 @@ class MatrixBot:
 
 
     async def login(self):
-        response = await self.client.login(self.password)
+        import socket
+        hname = socket.gethostname()
+        response = await self.client.login(self.password, device_name=hname)
         if type(response) == nio.LoginError:
             logging.error("""There was an error while logging in. Please check
 credentials""")
