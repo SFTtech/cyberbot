@@ -77,6 +77,7 @@ class MatrixRoom():
 
         room = cls(bot, nio_room)
         await room.load_plugins()
+        await room.bot.client.sync()
         await room.introduce_bot()
         for p in ["help", "meta"]:
             if not any(p == plugin.pluginname for plugin in room.plugins):
