@@ -72,7 +72,11 @@ credentials""")
         self.last_sync_time = time.time()
         if self.client.should_upload_keys:
             await self.client.keys_upload()
-
+        cur_displayname = await self.client.get_displayname()
+        logging.info(f"Current displayname: {cur_displayname}")
+        if cur_displayname != self.botname:
+            logging.info(f"Changing displayname to {self.botname}")
+            await self.client.set_displayname(self.botname)
 
     async def __aenter__(self):
         await self.login()

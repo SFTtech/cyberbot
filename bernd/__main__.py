@@ -69,7 +69,7 @@ config file exists and all fields are available""")
 
     async with MatrixBot(
             username,password,server,
-            botname=DEFAULT_BOTNAME,
+            botname=botname,
             deviceid=deviceid,
             store_path=store_path,
             environment=environment,
