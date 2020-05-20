@@ -8,15 +8,15 @@ import logging
 
 from matrixroom import MatrixRoom
 from pprint import pprint
+from collections import defaultdict
 
 INTERVAL = 5
 
 HELP_DESC = ("!gitlab\t\t\t-\tGitlab Feed Manager/Notifier\n")
 
-feeds = []
+feeds = defaultdict(list)
 
 async def register_to(plugin):
-    global feeds
 
     class RSSGitlabFeed:
         """
@@ -26,7 +26,6 @@ async def register_to(plugin):
         """
 
         def __init__(self, url, feed_token, last_update):
-            self.dbmfile = "feed_read.dbm"
             self.feed_token = feed_token
             self.last_update = last_update if last_update is not None else time.gmtime(0)
             self.url = url
@@ -59,6 +58,7 @@ async def register_to(plugin):
 
 
         async def update_from_feed(self, feed, last_n=-1):
+            #print(plugin.mroom.room_id, id(self), id(feeds))
             if last_n != -1:
                 feed['entries'].sort(key=lambda x: x.updated_parsed)
                 es = list(reversed(feed['entries']))[:last_n]
@@ -109,25 +109,26 @@ Available subcommands:
 
 
     async def load_feeds():
-        global feeds
-        feeds = []
+        feeds[id(plugin)] = []
         s = await plugin.kvstore_get_value("feeds")
         if s:
             try:
                 k = json.loads(s)
-                pprint(k)
-                feeds = [ RSSGitlabFeed(url,
+                #pprint(k)
+                feeds[id(plugin)] = [ RSSGitlabFeed(url,
                                         feed_token,
                                         time.gmtime(last_update))
                         for (url,feed_token,last_update) in k]
-                for feed in feeds:
+                for feed in feeds[id(plugin)]:
                     await feed.start()
             except Exception as e:
                 logging.warning(str(e))
 
     async def store_feeds():
+        #print(feeds[id(plugin)])
+        #print("In store feeds")
         feed_list = [(f.url,f.feed_token, calendar.timegm(f.last_update))
-                for f in feeds]
+                for f in feeds[id(plugin)]]
         s = json.dumps(feed_list)
         await plugin.kvstore_set_value("feeds",s)
 
@@ -139,7 +140,7 @@ Available subcommands:
             url = args[0]
             token = args[1]
             feed = RSSGitlabFeed(url, token, None)
-            feeds.append(feed)
+            feeds[id(plugin)].append(feed)
             await feed.start()
             await store_feeds()
 
@@ -149,17 +150,17 @@ Available subcommands:
         else:
             try:
                 i = int(args[0])
-                if i >= len(feeds):
+                if i >= len(feeds[id(plugin)]):
                     await plugin.send_text("Invalid feed number")
                 else:
-                    await feeds[i].stop()
-                    del feeds[i]
+                    await feeds[id(plugin)][i].stop()
+                    del feeds[id(plugin)][i]
                     await store_feeds()
             except ValueError:
                 await show_help()
             
     async def handle_listfeeds(args):
-        text = "\n".join(f"{i:2} - {feed.url}" for (i,feed) in enumerate(feeds))
+        text = "\n".join(f"{i:2} - {feed.url}" for (i,feed) in enumerate(feeds[id(plugin)]))
         await plugin.send_html(format_help(text))
 
 
@@ -188,10 +189,7 @@ Available subcommands:
             await show_help()
 
 
-    # Add a command handler waiting for the echo command
+    print("Loading feeds")
     await load_feeds()
     gitlab_handler = plugin.CommandHandler("gitlab", gitlab_callback)
     plugin.add_handler(gitlab_handler)
-
-    #feedreader = RSSGitlabFeed(plugin)
-    #await feedreader.check_for_changes()
