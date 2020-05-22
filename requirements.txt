@@ -5,3 +5,4 @@ pathlib
 PyMVGLive
 feedparser
 matrix-nio[e2e]
+aiohttp
