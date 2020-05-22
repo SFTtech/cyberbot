@@ -1,64 +1,143 @@
 import json
 import logging
-import aiohttp
+import asyncio
+
+
+from pprint import pprint
+from collections import defaultdict
+
+from aiohttp import web
 
 from matrixroom import MatrixRoom
-from pprint import pprint
+
 
 HELP_DESC = ("!gitlab\t\t\t-\tGitlab Webhook Manager/Notifier\n")
 
+
+# Configuration
+ADDRESS = "0.0.0.0"
+HTTPPORT = 80
+HTTPSPORT = 443
+PREFERHTTPS = True
 
 # Change these if you are running bernd behind a reverse proxy
 import socket
 HTTPURL  = f"http://{socket.getfqdn()}"
 HTTPSURL = f"https://{socket.getfqdn()}"
 
-IP = "0.0.0.0"
-HTTPPORT = 80
-HTTPSPORT = 443
-HTTP = True
-HTTPS = True
 
 
-class GlobalHookManager:
+class WebhookListener:
     """
-    The GlobalHookManager loads/stores hooks, listens to webhooks and can be
-    used to create a LocalHookManager. It is shared among multiple rooms
+    The WebhookListener creates a http and https server, listens to gitlab
+    webhooks and triggers handler for the webhooks. It should be global and
+    shared between multiple plugin instances
+
+    TODO: Add logging to everything
     """
-    async def loadhooks(self):
-        # use matrixbot's database for that
+
+    def __init__(self,
+            address="0.0.0.0",
+            http_port="80",
+            https_port="443"):
+        self.tokens = defaultdict(list) # maps a secrettoken on a list of handlers
+        self.is_running = False
+
+        self.address = address
+        self.http_port = http_port
+        self.https_port = https_port
+        return self
+        
+
+    async def start(self):
+        """
+        start servers
+        """
+        if self.is_running:
+            return
+
+        async def handle_request(request):
+            # TODO: check path
+            if request.method != "POST":
+                return web.Response(status=404)
+
+            token = request.headers.get("X-Gitlab-Token")
+            event = request.headers.get("X-Gitlab-Event")
+            if token is None or event is None:
+                return web.Response(status=400)
+
+            if token in self.tokens:
+                handlers = self.tokens[token]
+                c = await request.content.read()
+                try:
+                    jsondata = c.decode("utf-8")
+                    content = json.loads(jsondata)
+                except UnicodeDecodeError:
+                    return web.Response(status=400)
+                except:
+                    return web.Response(status=400)
+
+                await asyncio.gather(
+                        *(handler.handle(token, event, content) for handler in handlers))
+                return web.Response(text="OK")
+
+        self.server = web.Server(handle_request)
+        self.runner = webServerRunner(self.server)
+        await runner.setup()
+
+        self.http_site = web.TCPSite(self.runner, self.address, self.http_port)
+        self.https_site = web.TCPSite(self.runner, self.address, self.https_port)
+        await self.http_site.start()
+        await self.https_site.start()
+
+        self.is_running = True
+
+
+    async def register_hook(self, secrettoken, content):
+        """
+        handler has to be a async function and has to have a method
+        called 'handle(token, event, content)' where event is
+        the gitlab event and content ist the parsed json from the webhook post
+        """
+        tokens[secrettoken].append(handler)
+
+
+class LocalHookManager:
+    """
+    A LocalHookManager loads and stores secrettokens and registers them to the
+    webhooklistener
+    """
+    def __init__(self, plugin):
+        self.plugin = plugin
+
+    async def load_hooks(self):
         pass
 
-    async def registerLHM(self, lhm):
-        # register a local hook manager
+    async def store_hooks(self):
+        pass
+
+    async def add_hook(self):
+        pass
+
+    async def rem_hook(self):
+        pass
+
+    async def handle(token, event, content):
+        """
+        called by WebhookListener when a hook event occurs
+        """
         pass
 
 
-    class LocalHookManager:
-    """
-    Each room has a localhookmanager that talks with the GlobalHookManager
-    """
-        def __init__(self):
-            pass
-
-    def __init__(self):
-        pass
-
-    async def addhook(self, token):
-        pass
 
 
 
-
-
-
-
-if "gl" not in globals():
-    print("creating gl")
-    gl = GlobalListener()
-
-
-
+if "webhook_listener" not in globals():
+    logging.info("Creating WebhookListener")
+    webhook_listener = WebhookListener(address=ADDRESS,
+                                       http_port=HTTPPORT,
+                                       https_port=HTTPSPORT)
+    await webhook_listener.start()
 
 
 
