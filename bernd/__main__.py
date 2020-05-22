@@ -14,6 +14,7 @@ import nio
 DEFAULT_BOTNAME = "Matrix Bot"
 DEFAULT_PLUGINPATH = "plugins"
 DEFAULT_DEVICEID = "MATRIXBOT"
+DEFAULT_DBPATH = "./matrixbot.sqlite"
 
 
 # load_plugins
@@ -62,6 +63,7 @@ config file exists and all fields are available""")
     pluginpath = check_default("PLUGINPATH", DEFAULT_PLUGINPATH)
     deviceid   = check_default("DEVICEID", DEFAULT_DEVICEID)
     store_path = check_default("STOREPATH", "")
+    dbpath     = check_default("DBPATH", DEFAULT_DBPATH)
 
     environment = dict((k.upper(),v) for k,v in dict(vals).items()
                                      if k.lower() != 'password')
@@ -73,7 +75,8 @@ config file exists and all fields are available""")
             deviceid=deviceid,
             store_path=store_path,
             environment=environment,
-            plugindir=pluginpath
+            plugindir=pluginpath,
+            dbpath=dbpath
             ) as bot:
         await bot.load_rooms()
         await bot.read_plugins()
