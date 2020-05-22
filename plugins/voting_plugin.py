@@ -9,10 +9,8 @@ HELP_DESC = ("!voting\t\t\t-\tVoting subcommands\n")
 
 
 async def register_to(plugin):
+    #perm      [admins|all]                                  - change who can create a poll
     subcommands = """Available subcommands:
-    DURATION DOES NOT WORK YET!! POLLS HAVE TO BE MANUALLY CLOSED!!
-
-    perm      [admins|all]                                  - change who can create a poll
     addpoll   [--duration seconds] NAME option1 option2 ... - add a poll
     listpolls                                               - list running polls
     closepoll pollname                                      - close a poll (only the creator and admins can close a poll)
@@ -219,23 +217,30 @@ async def register_to(plugin):
         #await plugin.send_text(event['sender'] + ': ' + ' '.join(args))
         if len(args) == 0:
             await help()
-        elif args[0] == "perm":
-            if len(args) != 2 or args[1] not in ["admins", "all"]:
-                await help()
-            else:
-                if args[1] == "admins":
-                    await plugin.send_text("Thank you. Only admins can create polls now.")
-                    voting.onlyadmincreators = True
-                else:
-                    await plugin.send_text("Thank you. Everybody can create polls now.")
-                    voting.onlyadmincreators = True
-                await voting.save()
+       # elif args[0] == "perm":
+       #     if len(args) != 2 or args[1] not in ["admins", "all"]:
+       #         await help()
+       #     else:
+       #         if args[1] == "admins" \
+       #             and room.nio_room.users.get(event.sender).power_level == 100:
+       #             await plugin.send_text("Thank you. Only admins can create polls now.")
+       #             voting.onlyadmincreators = True
+       #         else:
+       #             await plugin.send_text("Thank you. Everybody can create polls now.")
+       #             voting.onlyadmincreators = True
+       #         await voting.save()
         elif args[0] == "addpoll":
+       #     for user in room.nio_room.users:
+       #         print(user)
+       #         print(room.nio_room.users.get(user).display_name)
+       #         print(room.nio_room.users.get(user).power_level)
+       #     print(room.nio_room.users.get(event.sender).display_name)
+       #     print(room.nio_room.users.get(event.sender).power_level)
             if len(args) < 3:
                 await help()
-            elif voting.onlyadmincreators \
-                    and room.nio_room.users.get(event.sender).power_level != 100:
-                        await plugin.send_text("You don't have permissions to create polls")
+       #     elif voting.onlyadmincreators \
+       #             and room.nio_room.users.get(event.sender).power_level != 100:
+       #                 await plugin.send_text("You don't have permissions to create polls (Need a power level of 100).")
             else:
                 if args[1] == "--duration":
                     duration = int(args[2])
