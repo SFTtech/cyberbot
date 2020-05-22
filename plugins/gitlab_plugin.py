@@ -42,6 +42,7 @@ class WebhookListener:
     shared between multiple plugin instances
 
     TODO: Add logging to everything
+    TODO: should be destoyed when a reload is triggered
     """
 
     def __init__(self,
@@ -102,7 +103,7 @@ class WebhookListener:
 
     async def nexthookid(self):
         self.currenthid += 1
-        return self.currenthid
+        return str(self.currenthid)
 
 
     async def register_hook(self, secrettoken, handler):
@@ -111,7 +112,7 @@ class WebhookListener:
         called 'handle(token, event, content)' where event is
         the gitlab event and content ist the parsed json from the webhook post
         """
-        hookid = self.nexthookid()
+        hookid = await self.nexthookid()
         self.tokens[secrettoken].append((hookid,handler))
         return hookid
 
@@ -121,6 +122,8 @@ class WebhookListener:
         for i in range(len(h)):
             if h[i][0] == hookid:
                 del h[i]
+                pprint("After del")
+                pprint(h)
                 break
 
 
@@ -165,9 +168,15 @@ class LocalHookManager:
             await self.store_tokens()
 
     async def rem_token(self, tokenid):
+        pprint(self.tokens)
         if tokenid in self.tokens:
-            self.whl.deregister_hook(tokenid)
-            del self.tokens[tokenid]
+            token = self.tokens[tokenid]
+            await self.whl.deregister_hook(token, tokenid)
+            self.tokens.pop(tokenid)
+            await self.store_tokens()
+            return True
+        else:
+            return False
 
     async def handle(token, event, content):
         """
@@ -243,13 +252,15 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
         if not args:
             await show_help()
         else:
-            await lhm.rem_token(args[0])
-            await plugin.send_text("Successfully removed token")
+            if await lhm.rem_token(args[0]):
+                await plugin.send_text("Successfully removed token")
+            else:
+                await plugin.send_text("Invalid Tokennr")
             
 
     async def handle_listhooks(args):
-        html = "\n".join(f"{tokenid:} - " + token[:4] + len(token-4)*"*" \
-                for (tokenid,token) in lhm.tokens)
+        html = "\n".join(f"{tokenid} - " + token[:4] + (len(token)-4)*"*" \
+                for (tokenid,token) in lhm.tokens.items())
         await plugin.send_html(format_help(html))
 
 
