@@ -33,6 +33,8 @@ class MatrixBot:
 
         if not store_path:
             store_path = Path(os.getcwd()) / "store"
+        else:
+            store_path = Path(store_path)
 
         if not store_path.is_dir():
             logging.info(f"Creating store directory in {store_path}")
@@ -72,7 +74,7 @@ credentials""")
         self.last_sync_time = time.time()
         if self.client.should_upload_keys:
             await self.client.keys_upload()
-        cur_displayname = await self.client.get_displayname()
+        cur_displayname = (await self.client.get_displayname()).displayname
         logging.info(f"Current displayname: {cur_displayname}")
         if cur_displayname != self.botname:
             logging.info(f"Changing displayname to {self.botname}")
@@ -120,6 +122,7 @@ credentials""")
 
     async def load_rooms(self):
         joined_rooms = self.client.rooms
+        print(joined_rooms)
         cursor = self.conn.cursor()
         res = cursor.execute("""
         SELECT *
@@ -171,13 +174,17 @@ credentials""")
                 return
             if room.room_id not in jrooms:
                 logging.info(f"Try joining room {room.room_id}")
-                # TODO: check return
                 await asyncio.sleep(0.5)
                 response = await self.client.join(room.room_id)
                 await asyncio.sleep(0.5)
-                if type(response) == nio.JoinResponse:
-                    #pprint(vars(response))
+                if type(response) == nio.responses.JoinResponse:
                     self.active_rooms.add(await MatrixRoom.new(self,room))
+                    pprint(vars(response))
+                else:
+                    print(type(response))
+                    print(vars(response))
+                    print(response.message)
+                    logging.warning(f"Couldn't joing the room: {response}")
             else:
                 logging.warning(f"Not joining room {room.room_id}")
                 logging.warning(f"Already joined.")
