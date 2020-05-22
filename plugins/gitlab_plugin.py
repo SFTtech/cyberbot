@@ -17,10 +17,10 @@ HELP_DESC = ("!gitlab\t\t\t-\tGitlab Webhook Manager/Notifier\n")
 
 
 # Configuration
-ADDRESS = "0.0.0.0"
+ADDRESS = "*"
 HTTPPORT = 8080
 HTTPSPORT = 4430
-PREFERHTTPS = True
+PREFERHTTPS = False
 PATH = "/webhook" # unused
 
 # Change these if you are running bernd behind a reverse proxy or you do some
@@ -46,7 +46,7 @@ class WebhookListener:
     """
 
     def __init__(self,
-            address="0.0.0.0",
+            address="*",
             http_port="80",
             https_port="443"):
         self.tokens = defaultdict(list) # maps a secrettoken on a list of handlers
@@ -95,7 +95,7 @@ class WebhookListener:
         await self.runner.setup()
 
         self.http_site = web.TCPSite(self.runner, self.address, self.http_port)
-        self.https_site = web.TCPSite(self.runner, self.address, self.https_port)
+        self.https_site = web.TCPSite(self.runner, self.address, self.https_port) # TODO: USE TLS
         await self.http_site.start()
         await self.https_site.start()
 
@@ -137,7 +137,7 @@ class LocalHookManager:
         whl: webhook listener
         """
         self.plugin = plugin
-        self.tokens = None
+        self.tokens = defaultdict(list)
         self.whl = whl
 
     async def load_tokens(self):
@@ -151,7 +151,7 @@ class LocalHookManager:
             tokenlist = []
 
         if self.tokens is None:
-            self.tokens = {}
+            self.tokens = defaultdict(list)
 
         for token in tokenlist:
             await self.add_token(token, store=False)
@@ -178,12 +178,14 @@ class LocalHookManager:
         else:
             return False
 
-    async def handle(token, event, content):
+    async def handle(self, token, event, content):
         """
         called by WebhookListener when a hook event occurs
         """
-        print("Token event received at localhookmanager")
-        # TODO
+        logging.info(f"Token event received: {event}")
+        text = format_event(event, content) # defined at the bottom
+        await self.plugin.send_notice(text)
+
 
 
 
@@ -197,6 +199,10 @@ if "webhook_listener" not in globals():
     # this happens in the first register_to call
 
 
+async def destructor(plugin):
+    webhook_listener.tokens = defaultdict(list)
+    webhook_listener.currenthid = 0
+
 
 
 async def register_to(plugin):
@@ -209,7 +215,7 @@ Available subcommands:
 
 How does it work?
     You first create a new secret token for a hook using the 'newhook' command.
-    Then open your gitlab repo page and navigate to 'Settings>Webhooks'.
+    Then open your gitlab repo (or group) page and navigate to 'Settings>Webhooks'.
     There, you enter the url and secret token returned by the 'newtoken'
     command and enter all event types you want to get notifications for and
     press 'Add webhook'.
@@ -283,3 +289,88 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
 
     gitlab_handler = plugin.CommandHandler("gitlab", gitlab_callback)
     plugin.add_handler(gitlab_handler)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def format_event(event, content):
+    # from gghttps://docs.gitlab.com/ee/user/project/integrations/webhooks.html
+    events = ["Push Hook",
+            "Tag Push Hook",
+            "Issue Hook",
+            "Note Hook",
+            "Merge Request Hook",
+            "Wiki Page Hook",
+            "Pipeline Hook",
+            "Job Hook"]
+
+
+    # PUSH HOOK
+    if event == "Push Hook":
+        user_name = content['user_name']
+        user_email = content['user_email']
+        ref = content['ref']
+        project = content['project']['name']
+        commits = [commit['title'] for commit in content['commits']]
+        if len(content['commits']):
+            lastcommiturl = content['commits'][0]['url']
+            committitle = commits[0]
+        else:
+            lastcommiturl = ""
+            committitle = ""
+        return f"{user_name}({user_email}) pushed to branch {ref} of {project}: {committitle}, {lastcommiturl}"
+
+
+    # TAG PUSH HOOK
+    if event == "Tag Push Hook":
+        user_name = content['user_name']
+        ref = content['ref']
+        project = content['project']['name']
+        projecturl = content['project']['web_url']
+        return f"{user_name} pushed tag {ref} of {project}: {projecturl}"
+
+
+    # ISSUE HOOK
+    if event == "Issue Hook":
+        # TODO: find out when opened/closed/changed
+        user_name = content['user']['name']
+        ref = content['ref']
+        oa = content['object_attributes']
+        issuetitle = oa['title']
+        issueurl = oa['url']
+        issueid = oa['iid']
+        project = content['project']['name']
+        projecturl = content['project']['web_url']
+        return f"issue #{iid} {issuetitle} in {project} changed: {issueurl}"
+
+    # TODO: note hook
+    # TODO: merge request hook
+    # TODO: wiki hook
+    # TODO: pipeline hook
+    # TODO: job hook
+
+    return "Unknown event received: {event}. Please poke the maintainers."
