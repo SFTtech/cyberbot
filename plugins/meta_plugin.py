@@ -1,7 +1,7 @@
 import asyncio
 
 HELP_DESC = ("""
-!listplugins\t\t\t-\tlist available plugins
+!listplugins\t\t\t-\tlist addable plugins
 !addplugin plugin [plugin2 ...]\t-\tadd plugin(s)
 !remplugin plugin [plugin2 ...]\t-\tremove plugin(s)
 !reload\t\t\t\t-\tReload plugins

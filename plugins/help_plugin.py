@@ -12,8 +12,8 @@ async def register_to(plugin):
         help_txt = "\n".join(available[pname].strip() for pname in pluginnames)
         help_txt += '''
 
-        For more information, look at the wiki page at <a href="">TODO</a>
         '''
+        #For more information, look at the wiki page at <a href="">TODO</a>
         formatted_help = format_help(help_txt)
         #print(dir(room))
         await plugin.send_html(formatted_help, help_txt)
