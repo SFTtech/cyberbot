@@ -61,6 +61,8 @@ class Plugin:
     async def stop_all_tasks(self):
         await asyncio.gather(*(self.stop_task(t) for t in self.tasks))
         # TODO: Document destructor
+        # TODO: change this to a register_destructor function callable by the
+        # module
         if hasattr(self.module,"destructor") and callable(self.module.destructor):
             try:
                 await self.module.destructor(self)
