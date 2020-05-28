@@ -336,7 +336,9 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
 
 
 def format_event(event, content, verbose=True, use="markdown"):
-    # the use parameter should toggle different styles in the future
+    # the use parameter should toggle different styles in the future (greyed
+    # out, verbose, emojis, ...)
+    # and make the verbose flag obsolete
     # from https://docs.gitlab.com/ee/user/project/integrations/webhooks.html
     events = ["Push Hook",
             "Tag Push Hook",
@@ -360,7 +362,6 @@ def format_event(event, content, verbose=True, use="markdown"):
         else:
             ref = ""
         branch = ref.split("/")[-1]
-        print(branch)
         if "project" in content:
             projectname = content['project']['name']
             projecturl = content['project']['web_url']
@@ -377,6 +378,7 @@ def format_event(event, content, verbose=True, use="markdown"):
         else:
             lastcommiturl = ""
             lastcommittitle = ""
+
         if not verbose:
             return f'{animal} {user_name}({user_email}) pushed to 🌿 {branch} of {projectname}: {lastcommittitle}, {lastcommiturl}'
         else:
@@ -393,18 +395,27 @@ def format_event(event, content, verbose=True, use="markdown"):
     # TAG PUSH HOOK
     if event == "Tag Push Hook":
         user_name = content['user_name']
+        user_email = content['user_email']
+        zeroes = "0000000000000000000000000000000000000000"
+        if content['after'] == zeroes:
+            action = "deleted"
+        elif content['before'] == zeroes:
+            action = "pushed new"
+        else:
+            action = "changed"
         if "ref" in content:
             ref = content['ref']
         else:
             ref = ""
+        tagname = ref.split("/")[-1]
         project = content['project']['name']
         projecturl = content['project']['web_url']
-        return f"{user_name} pushed tag {ref} of {project}: {projecturl}"
+        return f"{animal} {user_name} ({user_email}) {action} remote 🏷{tagname} n <a href={projecturl}>{project}</a>"
 
 
     # ISSUE HOOK
     if event == "Issue Hook":
-        # TODO: find out when opened/closed/changed
+        user_email = content['user']['email']
         user_name = content['user']['name']
         if "ref" in content:
             ref = content['ref']
@@ -414,9 +425,14 @@ def format_event(event, content, verbose=True, use="markdown"):
         issuetitle = oa['title']
         issueurl = oa['url']
         issueid = oa['iid']
+        action = oa['action']
+        actionpassive = action + "ed" if "open" in action else action + "d" # opened and reopened
+        new = "new issue" if action == "open" else "issue"
+        #TODO: check confidential attribute
+        #TODO: print exact changes (also labels, etc, description if new) when verbose is set
         project = content['project']['name']
         projecturl = content['project']['web_url']
-        return f"issue #{iid} {issuetitle} in {project} changed: {issueurl}"
+        return f"{animal} {user_name} ({user_email}) {actionpassive} {new} <a href={issueurl}>#{issueid} {issuetitle}</a> in <a href={projecturl}>{project}</a>"
 
     # TODO: note hook
     # TODO: merge request hook
