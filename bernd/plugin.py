@@ -115,7 +115,18 @@ class Plugin:
                     "body": txt,
                 },
                 ignore_unverified_devices=True)
-        logging.debug(response)
+
+    async def send_htmlnotice(self, formatted_txt, txt=""):
+        response = await self.client.room_send(
+                room_id=self.nio_room.room_id,
+                message_type="m.room.message",
+                content={
+                    "msgtype": "m.notice",
+                    "format": "org.matrix.custom.html",
+                    "formatted_body" : formatted_txt,
+                    "body": txt,
+                },
+                ignore_unverified_devices=True)
 
     async def send_text(self, txt):
         await self.client.room_send(
@@ -136,6 +147,7 @@ class Plugin:
                     "body": txt,
                 },
                 ignore_unverified_devices=True)
+
 
     async def get_joined_members(self):
         """
