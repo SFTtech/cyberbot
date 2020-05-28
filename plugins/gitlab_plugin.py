@@ -14,7 +14,7 @@ from aiohttp import web
 from matrixroom import MatrixRoom
 
 
-HELP_DESC = ("!gitlab\t\t\t-\tGitlab Webhook Manager/Notifier\n")
+HELP_DESC = ("!gitlab\t\t\t-\tGitlab Webhook Manager/Notifier 🦊\n")
 
 
 # Configuration
@@ -174,9 +174,15 @@ class LocalHookManager:
         called by WebhookListener when a hook event occurs
         """
         logging.info(f"Token event received: {event}")
-        text = format_event(event, content) # defined at the bottom
-        await self.plugin.send_notice(text)
-
+        text = format_event(event, content, verbose=True, use="html") # defined at the bottom
+        #await self.plugin.send_notice(text)
+        await self.plugin.send_html(text)
+        await self.plugin.send_htmlnotice(text)
+        #await self.plugin.send_html(text)
+        #text = format_event(event, content, verbose=True, use="text") # defined at the bottom
+        #await self.plugin.send_notice(text)
+        #await self.plugin.send_text(text)
+        #await self.plugin.send_html(text)
 
 
 
@@ -223,7 +229,7 @@ Available subcommands:
     remhook hooknbr         - remove a webhook subscription
     listhooks               - show subscribed webhooks
 
-How does it work?
+How does it work? 🦊
     You first create a new secret token for a hook using the 'newhook' command.
     Then open your gitlab repo (or group) page and navigate to 'Settings>Webhooks'.
     There, you enter the url and secret token returned by the 'newtoken'
@@ -278,6 +284,11 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
 
 
     async def gitlab_callback(room, event):
+#        fmttest='''Thomas(thomas@example.com) pushed to branch master of project cyber-slurm https://gitlab.rbg.tum.de/cyber/cyber-slurm/-/tree/master
+#- Fix bug 1 (test.com)
+#- Fix readme (test.com)
+#'''
+        #await plugin.send_notice(fmttest)
         args = plugin.extract_args(event)
         args.pop(0)
         if len(args) == 0:
@@ -324,8 +335,9 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
 
 
 
-def format_event(event, content):
-    # from gghttps://docs.gitlab.com/ee/user/project/integrations/webhooks.html
+def format_event(event, content, verbose=True, use="markdown"):
+    # the use parameter should toggle different styles in the future
+    # from https://docs.gitlab.com/ee/user/project/integrations/webhooks.html
     events = ["Push Hook",
             "Tag Push Hook",
             "Issue Hook",
@@ -334,6 +346,9 @@ def format_event(event, content):
             "Wiki Page Hook",
             "Pipeline Hook",
             "Job Hook"]
+    #animals = "🐶🐺🦊🦝🐱🐱🦁🐯"
+    animals = "🦊"
+    animal = random.choice(animals)
 
 
     # PUSH HOOK
@@ -344,15 +359,35 @@ def format_event(event, content):
             ref = content['ref']
         else:
             ref = ""
-        project = content['project']['name']
-        commits = [commit['title'] for commit in content['commits']]
-        if len(content['commits']):
+        branch = ref.split("/")[-1]
+        print(branch)
+        if "project" in content:
+            projectname = content['project']['name']
+            projecturl = content['project']['web_url']
+        else:
+            projectname = ""
+        if not "commits" in content:
+            commits = []
+        else:
+            commits = content['commits']
+
+        if commits:
             lastcommiturl = content['commits'][0]['url']
-            committitle = commits[0]
+            lastcommittitle = commits[0]
         else:
             lastcommiturl = ""
-            committitle = ""
-        return f"{user_name}({user_email}) pushed to branch {ref} of {project}: {committitle}, {lastcommiturl}"
+            lastcommittitle = ""
+        if not verbose:
+            return f'{animal} {user_name}({user_email}) pushed to 🌿 {branch} of {projectname}: {lastcommittitle}, {lastcommiturl}'
+        else:
+            if use.lower() == "html":
+                s =  f"{animal} {user_name} (<a href='mailto:{user_email}'>{user_email}</a>) pushed to 🌿 {branch} of <a href={projecturl}>{projectname}</a><ul>\n"
+                s += "\n".join(f"<li>{commit['title']} (<a href={commit['url']}>{commit['id'][:7]}</a>)</li>" for commit in commits)
+                s += "</ul>"
+            else:
+                s =  f"{animal} {user_name}({user_email}) pushed to 🌿 {branch} of {projectname} {projecturl}\n"
+                s += "\n".join(f"* {commit['title']} ({commit['url']})" for commit in commits)
+        return s
 
 
     # TAG PUSH HOOK
