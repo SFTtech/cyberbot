@@ -3,6 +3,7 @@ import logging
 import asyncio
 import random
 import string
+import configparser
 
 
 from pprint import pprint
@@ -17,21 +18,10 @@ HELP_DESC = ("!gitlab\t\t\t-\tGitlab Webhook Manager/Notifier\n")
 
 
 # Configuration
-ADDRESS = "*"
-HTTPPORT = 8080
-HTTPSPORT = 4430
-PREFERHTTPS = False
-PATH = "/webhook" # unused
-
-# Change these if you are running bernd behind a reverse proxy or you do some
-# port magic
-import socket
-HTTPURL  = f"http://{socket.getfqdn()}"
-if HTTPPORT != 80:
-    HTTPURL  += f":{HTTPPORT}"
-HTTPSURL = f"https://{socket.getfqdn()}"
-if HTTPSPORT != 443:
-    HTTPSURL  += f":{HTTPSPORT}"
+CONFIGPATH = "./plugins/gitlab.ini"
+DEFAULTADDRESS = "*"
+DEFAULTPORT = 8080
+DEFAULTPATH = "/webhook" # unused
 
 
 
@@ -47,15 +37,17 @@ class WebhookListener:
 
     def __init__(self,
             address="*",
-            http_port="80",
-            https_port="443"):
+            port="8080",
+            url="localhost",
+            path="/webhook"):
         self.tokens = defaultdict(list) # maps a secrettoken on a list of handlers
         self.is_running = False
         self.currenthid = 0 # unique ids for new hooks
 
         self.address = address
-        self.http_port = http_port
-        self.https_port = https_port
+        self.port = port
+        self.url = url
+        self.path = path
         
 
     async def start(self):
@@ -66,7 +58,8 @@ class WebhookListener:
             return
 
         async def handle_request(request):
-            # TODO: check path
+            if request.path != self.path:
+                logging.info(f"Gitlab: ignoring request to wrong path: {request.path}")
             if request.method != "POST":
                 return web.Response(status=404)
 
@@ -94,10 +87,8 @@ class WebhookListener:
         self.runner = web.ServerRunner(self.server)
         await self.runner.setup()
 
-        self.http_site = web.TCPSite(self.runner, self.address, self.http_port)
-        self.https_site = web.TCPSite(self.runner, self.address, self.https_port) # TODO: USE TLS
-        await self.http_site.start()
-        await self.https_site.start()
+        self.site = web.TCPSite(self.runner, self.address, self.port)
+        await self.site.start()
 
         self.is_running = True
 
@@ -192,9 +183,28 @@ class LocalHookManager:
 
 if "webhook_listener" not in globals():
     logging.info("Creating WebhookListener")
-    webhook_listener = WebhookListener(address=ADDRESS,
-                                       http_port=HTTPPORT,
-                                       https_port=HTTPSPORT)
+    logging.info("Reading gitlab config")
+
+    config = configparser.ConfigParser()
+    config.read(CONFIGPATH)
+    if "server" not in config or "exposed" not in config or \
+        "address" not in config["server"] or "port" not in config["server"] or \
+        "url" not in config["exposed"] or "path" not in config["exposed"]:
+        logging.warning("Gitlab: invalid config file, falling back to defaults")
+        config["server"] = {
+                "address" : DEFAULADDRESS,
+                "port" : DEFAULTPORT,
+            }
+        config["exposed"] = {
+                "url" : "http" + DEFAULADDRESS + f":{DEFAULTPORT}",
+                "path" : DEFAULTPATH,
+            }
+    p = config["exposed"]["path"]
+    p = "/" + p if not p.startswith("/") else p
+    webhook_listener = WebhookListener(address=config["server"]["address"],
+                                       port=int(config["server"]["port"]),
+                                       url=config["exposed"]["url"],
+                                       path=p)
     # has to be started from an async context
     # this happens in the first register_to call
 
@@ -243,10 +253,7 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
         chars = string.ascii_letters + string.digits
         n = 16
         token = "".join(random.choice(chars) for i in range(n))
-        if PREFERHTTPS:
-            url = HTTPSURL + PATH
-        else:
-            url = HTTPURL + PATH
+        url = webhook_listener.url + webhook_listener.path
         await lhm.add_token(token)
         text = f"Successfully created token."
         await plugin.send_text(text)
@@ -333,7 +340,10 @@ def format_event(event, content):
     if event == "Push Hook":
         user_name = content['user_name']
         user_email = content['user_email']
-        ref = content['ref']
+        if "ref" in content:
+            ref = content['ref']
+        else:
+            ref = ""
         project = content['project']['name']
         commits = [commit['title'] for commit in content['commits']]
         if len(content['commits']):
@@ -348,7 +358,10 @@ def format_event(event, content):
     # TAG PUSH HOOK
     if event == "Tag Push Hook":
         user_name = content['user_name']
-        ref = content['ref']
+        if "ref" in content:
+            ref = content['ref']
+        else:
+            ref = ""
         project = content['project']['name']
         projecturl = content['project']['web_url']
         return f"{user_name} pushed tag {ref} of {project}: {projecturl}"
@@ -358,7 +371,10 @@ def format_event(event, content):
     if event == "Issue Hook":
         # TODO: find out when opened/closed/changed
         user_name = content['user']['name']
-        ref = content['ref']
+        if "ref" in content:
+            ref = content['ref']
+        else:
+            ref = ""
         oa = content['object_attributes']
         issuetitle = oa['title']
         issueurl = oa['url']
@@ -373,4 +389,4 @@ def format_event(event, content):
     # TODO: pipeline hook
     # TODO: job hook
 
-    return "Unknown event received: {event}. Please poke the maintainers."
+    return f"Unknown event received: {event}. Please poke the maintainers."
