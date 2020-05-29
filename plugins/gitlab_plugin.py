@@ -1,7 +1,6 @@
 import json
 import logging
 import asyncio
-import random
 import string
 import configparser
 
@@ -13,12 +12,14 @@ from aiohttp import web
 
 from matrixroom import MatrixRoom
 
+import gitlab.formatting as fmt
+
 
 HELP_DESC = ("!gitlab\t\t\t-\tGitlab Webhook Manager/Notifier 🦊\n")
 
 
 # Configuration
-CONFIGPATH = "./plugins/gitlab.ini"
+CONFIGPATH = "./plugins/gitlab/gitlab.ini" # TODO: use same plugin path as bernd
 DEFAULTADDRESS = "*"
 DEFAULTPORT = 8080
 DEFAULTPATH = "/webhook" # unused
@@ -71,6 +72,8 @@ class WebhookListener:
             if token in self.tokens:
                 handlers = [handler for (hid,handler) in self.tokens[token]]
                 c = await request.content.read()
+                with open("hookslog.txt", "ab+") as f:
+                    f.write(c)
                 try:
                     jsondata = c.decode("utf-8")
                     content = json.loads(jsondata)
@@ -174,7 +177,7 @@ class LocalHookManager:
         called by WebhookListener when a hook event occurs
         """
         logging.info(f"Token event received: {event}")
-        text = format_event(event, content, verbose=True, use="html") # defined at the bottom
+        text = fmt.format_event(event, content, verbose=True, use="html")
         #await self.plugin.send_notice(text)
         await self.plugin.send_html(text)
         await self.plugin.send_htmlnotice(text)
@@ -198,11 +201,11 @@ if "webhook_listener" not in globals():
         "url" not in config["exposed"] or "path" not in config["exposed"]:
         logging.warning("Gitlab: invalid config file, falling back to defaults")
         config["server"] = {
-                "address" : DEFAULADDRESS,
+                "address" : DEFAULTADDRESS,
                 "port" : DEFAULTPORT,
             }
         config["exposed"] = {
-                "url" : "http" + DEFAULADDRESS + f":{DEFAULTPORT}",
+                "url" : "http" + DEFAULTADDRESS + f":{DEFAULTPORT}",
                 "path" : DEFAULTPATH,
             }
     p = config["exposed"]["path"]
@@ -308,136 +311,3 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
     gitlab_handler = plugin.CommandHandler("gitlab", gitlab_callback)
     plugin.add_handler(gitlab_handler)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def format_event(event, content, verbose=True, use="markdown"):
-    # the use parameter should toggle different styles in the future (greyed
-    # out, verbose, emojis, ...)
-    # and make the verbose flag obsolete
-    # from https://docs.gitlab.com/ee/user/project/integrations/webhooks.html
-    events = ["Push Hook",
-            "Tag Push Hook",
-            "Issue Hook",
-            "Note Hook",
-            "Merge Request Hook",
-            "Wiki Page Hook",
-            "Pipeline Hook",
-            "Job Hook"]
-    #animals = "🐶🐺🦊🦝🐱🐱🦁🐯"
-    animals = "🦊"
-    animal = random.choice(animals)
-
-
-    # PUSH HOOK
-    if event == "Push Hook":
-        user_name = content['user_name']
-        user_email = content['user_email']
-        if "ref" in content:
-            ref = content['ref']
-        else:
-            ref = ""
-        branch = ref.split("/")[-1]
-        if "project" in content:
-            projectname = content['project']['name']
-            projecturl = content['project']['web_url']
-        else:
-            projectname = ""
-        if not "commits" in content:
-            commits = []
-        else:
-            commits = content['commits']
-
-        if commits:
-            lastcommiturl = content['commits'][0]['url']
-            lastcommittitle = commits[0]
-        else:
-            lastcommiturl = ""
-            lastcommittitle = ""
-
-        if not verbose:
-            return f'{animal} {user_name}({user_email}) pushed to 🌿 {branch} of {projectname}: {lastcommittitle}, {lastcommiturl}'
-        else:
-            if use.lower() == "html":
-                s =  f"{animal} {user_name} (<a href='mailto:{user_email}'>{user_email}</a>) pushed to 🌿 {branch} of <a href={projecturl}>{projectname}</a><ul>\n"
-                s += "\n".join(f"<li>{commit['title']} (<a href={commit['url']}>{commit['id'][:7]}</a>)</li>" for commit in commits)
-                s += "</ul>"
-            else:
-                s =  f"{animal} {user_name}({user_email}) pushed to 🌿 {branch} of {projectname} {projecturl}\n"
-                s += "\n".join(f"* {commit['title']} ({commit['url']})" for commit in commits)
-        return s
-
-
-    # TAG PUSH HOOK
-    if event == "Tag Push Hook":
-        user_name = content['user_name']
-        user_email = content['user_email']
-        zeroes = "0000000000000000000000000000000000000000"
-        if content['after'] == zeroes:
-            action = "deleted"
-        elif content['before'] == zeroes:
-            action = "pushed new"
-        else:
-            action = "changed"
-        if "ref" in content:
-            ref = content['ref']
-        else:
-            ref = ""
-        tagname = ref.split("/")[-1]
-        project = content['project']['name']
-        projecturl = content['project']['web_url']
-        return f"{animal} {user_name} ({user_email}) {action} remote 🏷{tagname} n <a href={projecturl}>{project}</a>"
-
-
-    # ISSUE HOOK
-    if event == "Issue Hook":
-        user_email = content['user']['email']
-        user_name = content['user']['name']
-        if "ref" in content:
-            ref = content['ref']
-        else:
-            ref = ""
-        oa = content['object_attributes']
-        issuetitle = oa['title']
-        issueurl = oa['url']
-        issueid = oa['iid']
-        action = oa['action']
-        actionpassive = action + "ed" if "open" in action else action + "d" # opened and reopened
-        new = "new issue" if action == "open" else "issue"
-        #TODO: check confidential attribute
-        #TODO: print exact changes (also labels, etc, description if new) when verbose is set
-        project = content['project']['name']
-        projecturl = content['project']['web_url']
-        return f"{animal} {user_name} ({user_email}) {actionpassive} {new} <a href={issueurl}>#{issueid} {issuetitle}</a> in <a href={projecturl}>{project}</a>"
-
-    # TODO: note hook
-    # TODO: merge request hook
-    # TODO: wiki hook
-    # TODO: pipeline hook
-    # TODO: job hook
-
-    return f"Unknown event received: {event}. Please poke the maintainers."
