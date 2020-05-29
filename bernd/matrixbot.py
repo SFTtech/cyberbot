@@ -6,6 +6,7 @@ import importlib
 import logging
 import traceback
 import sqlite3
+import sys
 
 from pathlib import Path
 from pprint import pprint
@@ -44,6 +45,9 @@ class MatrixBot:
                 logging.error("Failed to create store path. Check permissions.")
                 print(e)
                 sys.exit(-1)
+
+        # this is a small hack to add the plugins to the import search path
+        sys.path.append(plugindir)
 
 
         logging.info(f"Store path: {store_path}")
