@@ -6,8 +6,8 @@ Requires=multi-user.target
 [Service]
 Type=simple
 User=bernd
-WorkingDirectory=/opt/cyber-matrix-bot
-ExecStart=/opt/cyber-matrix-bot/venv/bin/python3 ./bernd -c ./rbg.ini
+WorkingDirectory=/srv/cyber-matrix-bot
+ExecStart=/srv/cyber-matrix-bot/venv/bin/python3 ./bernd -c ./rbg.ini
 Restart=always
 RestartSec=3
 
