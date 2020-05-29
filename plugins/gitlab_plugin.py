@@ -177,7 +177,7 @@ class LocalHookManager:
         called by WebhookListener when a hook event occurs
         """
         logging.info(f"Token event received: {event}")
-        text = fmt.format_event(event, content, verbose=True, use="html")
+        text = fmt.format_event(event, content, verbose=False, emojis=True, asnotice=True)
         #await self.plugin.send_notice(text)
         await self.plugin.send_html(text)
         await self.plugin.send_htmlnotice(text)
