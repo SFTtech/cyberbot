@@ -210,11 +210,104 @@ class PushFormatter(OtherUserFormatter):
 
 
 
+class TagPushFormatter(OtherUserFormatter):
+
+    def format_tag(self, tagname):
+        if self.emojis:
+            return f"tag 🏷️{tagname}"
+        else:
+            return f"tag {tagname}"
+
+    def get_tag(self):
+        ref = self.safe_get_val("ref","")
+        return ref.split("/")[-1]
+
+    def get_verb_preposition(self):
+        zeroes = "0000000000000000000000000000000000000000"
+        after = self.safe_get_val("after","")
+        before = self.safe_get_val("before","")
+        if after == zeroes:
+            return "deleted","from"
+        elif before == zeroes:
+            return "pushed new","to"
+        else:
+            return "changed","in"
+
+    def format_content(self):
+        """
+        I do not think a distinction has to be made here between verbosity
+        levels
+        """
+        project = self.get_project()
+        fmt_project = self.format_project(project)
+        user = self.get_main_user()
+        fmt_user = self.format_user(user)
+        tag = self.get_tag()
+        fmt_tag = self.format_tag(tag)
+        verb,preposition = self.get_verb_preposition()
+
+        return f"{fmt_user} {verb} remote {fmt_tag} {preposition} {fmt_project}"
+
+
+class IssueFormatter(Formatter):
+
+    def get_verb_passive(self, action):
+        """
+        So far I have seen the following verbs: open, reopen, close, update
+        """
+        # opened and reopened need an ed th the end
+        if "open" in action:
+            return action + "ed"
+        if action == "did something unknown to":
+            return atction
+        else:
+            return action + "d"
+
+    def format_issue(self, oas):
+        if self.verbose:
+            #TODO
+            pass
+        else:
+            url = self.safe_get_val("url","",d=oas)
+            ID = self.safe_get_val("id","",d=oas)
+            if ID:
+                ID = "#" + str(ID)
+            title = self.safe_get_val("title","Unknown Title",d=oas)
+            res = f"{ID} {title}"
+            if url:
+                return self.format_link(url,res)
+            else:
+                return res
+
+    def format_content(self):
+        project = self.get_project()
+        fmt_project = self.format_project(project)
+        user = self.get_main_user()
+        fmt_user = self.format_user(user)
+
+        oas = self.safe_get_val("object_attributes",{})
+        action = self.safe_get_val("action","did something unknown to",d=oas)
+
+        verb = self.get_verb_passive(action)
+        new = "new issue" if action == "open" else "issue"
+        fmt_issue = self.format_issue(oas)
+
+        if self.verbose:
+            # TODO
+            pass
+        else:
+            return f"{fmt_user} {verb} {new} {fmt_issue} in {fmt_project}"
+
+
+
 def format_event(event, content, verbose=False, emojis=True, asnotice=True):
+    """
+    TODO: change verbose to a verbosity level with multiple (>2) options
+    """
     formatters = {
             "Push Hook" : PushFormatter,
-            #"Tag Push Hook" : Formatter,
-            #"Issue Hook" : Formatter,
+            "Tag Push Hook" : TagPushFormatter,
+            "Issue Hook" : IssueFormatter,
             #"Note Hook" : Formatter,
             #"Merge Request Hook" : Formatter,
             #"Wiki Page Hook" : Formatter,
@@ -225,48 +318,6 @@ def format_event(event, content, verbose=False, emojis=True, asnotice=True):
     if event in formatters:
         return formatters[event](event, content, verbose, emojis, asnotice).format()
     return f"Unknown event received: {event}. Please poke the maintainers."
-
-#    # TAG PUSH HOOK
-#    if event == "Tag Push Hook":
-#        user_name = content['user_name']
-#        user_email = content['user_email']
-#        zeroes = "0000000000000000000000000000000000000000"
-#        if content['after'] == zeroes:
-#            action = "deleted"
-#        elif content['before'] == zeroes:
-#            action = "pushed new"
-#        else:
-#            action = "changed"
-#        if "ref" in content:
-#            ref = content['ref']
-#        else:
-#            ref = ""
-#        tagname = ref.split("/")[-1]
-#        project = content['project']['name']
-#        projecturl = content['project']['web_url']
-#        return f"{animal} {user_name} ({user_email}) {action} remote 🏷{tagname} n <a href={projecturl}>{project}</a>"
-#
-#
-#    # ISSUE HOOK
-#    if event == "Issue Hook":
-#        user_email = content['user']['email']
-#        user_name = content['user']['name']
-#        if "ref" in content:
-#            ref = content['ref']
-#        else:
-#            ref = ""
-#        oa = content['object_attributes']
-#        issuetitle = oa['title']
-#        issueurl = oa['url']
-#        issueid = oa['iid']
-#        action = oa['action']
-#        actionpassive = action + "ed" if "open" in action else action + "d" # opened and reopened
-#        new = "new issue" if action == "open" else "issue"
-#        #TODO: check confidential attribute
-#        #TODO: print exact changes (also labels, etc, description if new) when verbose is set
-#        project = content['project']['name']
-#        projecturl = content['project']['web_url']
-#        return f"{animal} {user_name} ({user_email}) {actionpassive} {new} <a href={issueurl}>#{issueid} {issuetitle}</a> in <a href={projecturl}>{project}</a>"
 #    
 #    if event == "Note Hook":
 #        user_email = content['user']['email']
