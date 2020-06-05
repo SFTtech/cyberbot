@@ -1,6 +1,8 @@
 import random
 from collections import namedtuple
 
+# TODO: escape html
+
 
 User = namedtuple("User",["ID", "name", "username", "email", "avatar_url"])
 Project = namedtuple("Project", ["ID", "name", "description", "web_url"])
@@ -164,12 +166,15 @@ class PushFormatter(OtherUserFormatter):
         else:
             return f"branch {branchname}"
 
-    def format_commit(self, commit):
+    def format_commit(self, commit, href=True):
         if self.verbose:
             # TODO:
             pass
         else:
-            return f"{commit.title} ({self.format_link(commit.url,commit.ID[:7])})"
+            if href:
+                return f"{commit.title} ({self.format_link(commit.url,commit.ID[:7])})"
+            else:
+                return f"{commit.title} ({commit.ID[0:7]})"
 
     def format_commits(self, commits):
         """
@@ -181,17 +186,20 @@ class PushFormatter(OtherUserFormatter):
         ref = self.safe_get_val("ref","")
         return ref.split("/")[-1]
 
+    def commit_from_dict(self, commit):
+        attrs = {}
+        for attr in self.commitattrs:
+            if attr == "author" and "author" in commit:
+                attrs["author"] = self.get_user_from_dict(commit['author'])
+            else:
+                attrs[attr]=self.safe_get_val(attr.lower(),getattr(self.defaultcommit,attr),d=commit)
+        return PushFormatter.Commit(**attrs)
+
     def get_commits(self):
         commitdicts = self.safe_get_val("commits",[])
         commits = []
         for commit in commitdicts:
-            attrs = {}
-            for attr in self.commitattrs:
-                if attr == "author" and "author" in commit:
-                    attrs["author"] = self.get_user_from_dict(commit['author'])
-                else:
-                    attrs[attr]=self.safe_get_val(attr.lower(),getattr(self.defaultcommit,attr),d=commit)
-            commits.append(PushFormatter.Commit(**attrs))
+            commits.append(commit_from_dict(commit))
         return commits
                 
 
@@ -259,11 +267,11 @@ class IssueFormatter(Formatter):
         if "open" in action:
             return action + "ed"
         if action == "did something unknown to":
-            return atction
+            return action
         else:
             return action + "d"
 
-    def format_issue(self, oas):
+    def format_issue(self, oas, href=True):
         if self.verbose:
             #TODO
             pass
@@ -274,7 +282,7 @@ class IssueFormatter(Formatter):
                 ID = "#" + str(ID)
             title = self.safe_get_val("title","Unknown Title",d=oas)
             res = f"{ID} {title}"
-            if url:
+            if url and href:
                 return self.format_link(url,res)
             else:
                 return res
@@ -299,6 +307,61 @@ class IssueFormatter(Formatter):
             return f"{fmt_user} {verb} {new} {fmt_issue} in {fmt_project}"
 
 
+class NoteFormatter(Formatter):
+    """
+    four types of comments: commit, merge request, issue, code snippet
+    https://docs.gitlab.com/ee/user/project/integrations/webhooks.html#comment-events
+    """
+
+    def format_target(self, oas):
+        if "noteable_type" not in oas:
+            return f"Received invalid Comment Type (no noteable_type field in object_attributes)"
+        comment_type = oas["noteable_type"]
+        comment_url = self.safe_get_val("url", "https://example.com", d=oas)
+        if comment_type == "Issue":
+            comment_target = IssueFormatter(self.event, self.content, self.verbose, self.emojis, self.asnotice).format_issue(self.safe_get_val("issue", {}), href=False)
+            fmt_comment_target = self.format_link(comment_url ,comment_target)
+        elif comment_type == "Snippet":
+            snips = self.safe_get_val("snippet", {})
+            snippet_title = self.safe_get_val("title", "", d=snips)
+            snippet_content = self.safe_get_val("content", "", d=snips)
+            snippet_fname = self.safe_get_val("file_name", "", d=snips)
+            comment_target = f"{snippet_title} ({snippet_fname})"
+            fmt_comment_target = "snippet " + self.format_link(comment_url ,comment_target)
+        elif comment_type == "Commit":
+            pf = PushFormatter(self.event, self.content, self.verbose, self.emojis, self.asnotice)
+            commit = pf.commit_from_dict(self.safe_get_val("commit", {}))
+            comment_target = pf.format_commit(commit, href=False)
+            fmt_comment_target = self.format_link(comment_url ,comment_target)
+            print(fmt_comment_target)
+        elif comment_type == "MergeRequest":
+            fmt_comment_target = f"Merge Request"
+            pass # TODO
+        else:
+            fmt_comment_target = f"Unknown Commen Target {comment_type}"
+        return fmt_comment_target
+
+
+    def format_content(self):
+        user = self.get_main_user()
+        fmt_user = self.format_user(user)
+        project = self.get_project()
+        fmt_project = self.format_project(project)
+
+        oas = self.safe_get_val("object_attributes",{})
+
+        fmt_target = self.format_target(oas)
+        note = self.safe_get_val("note", "", d=oas)
+        if self.verbose:
+            fmt_note = note
+        else:
+            if note.count("\n") > 3:
+                fmt_note = "\n".join(note.split("\n")[:3])
+                fmt_note += "..."
+
+        return f"{fmt_user} commented on {fmt_target} in {fmt_project}:<br/><pre><code>{fmt_note}</pre></code>"
+
+
 
 def format_event(event, content, verbose=False, emojis=True, asnotice=True):
     """
@@ -308,7 +371,7 @@ def format_event(event, content, verbose=False, emojis=True, asnotice=True):
             "Push Hook" : PushFormatter,
             "Tag Push Hook" : TagPushFormatter,
             "Issue Hook" : IssueFormatter,
-            #"Note Hook" : Formatter,
+            "Note Hook" : NoteFormatter,
             #"Merge Request Hook" : Formatter,
             #"Wiki Page Hook" : Formatter,
             #"Pipeline Hook" : Formatter,
