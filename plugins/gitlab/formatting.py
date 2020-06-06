@@ -53,7 +53,6 @@ class Formatter:
     def format_link(self, url, linktext):
         return f"<a href='{url}'>{linktext}</a>"
 
-
     def format_user(self, user):
         """
         Ignore user.username and user.avatar for now
@@ -335,14 +334,18 @@ class NoteFormatter(Formatter):
             fmt_comment_target = self.format_link(comment_url ,comment_target)
             print(fmt_comment_target)
         elif comment_type == "MergeRequest":
-            fmt_comment_target = f"Merge Request"
-            pass # TODO
+            mr = self.safe_get_val("merge_request",{})
+            comment_target = MergeFormatter.format_mr(mr, href=False)
+            fmt_comment_target = self.format_link(comment_url ,comment_target)
         else:
             fmt_comment_target = f"Unknown Commen Target {comment_type}"
         return fmt_comment_target
 
 
     def format_content(self):
+        from pprint import pprint
+        pprint(self.content)
+        shortendescr = True
         user = self.get_main_user()
         fmt_user = self.format_user(user)
         project = self.get_project()
@@ -358,8 +361,83 @@ class NoteFormatter(Formatter):
             if note.count("\n") > 3:
                 fmt_note = "\n".join(note.split("\n")[:3])
                 fmt_note += "..."
+            else:
+                fmt_note = note
 
         return f"{fmt_user} commented on {fmt_target} in {fmt_project}:<br/><pre><code>{fmt_note}</pre></code>"
+
+
+
+
+class MergeFormatter(Formatter):
+
+    def get_verb_passive(self, action):
+        """
+        So far I have seen the following verbs: open, reopen, close, update
+        """
+        # opened and reopened need an ed th the end
+        if "open" in action:
+            return action + "ed"
+        if action == "did something unknown to":
+            return action
+        else:
+            return action + "d"
+
+    def format_mr(oas, href=True):
+        def safe_get_val(a,b,d):
+            if a in d:
+                return d[a]
+            else:
+                return b
+        iid = safe_get_val("iid","",d=oas)
+        url = safe_get_val("url", "", d=oas)
+        source = safe_get_val("source", {}, d=oas)
+        target = safe_get_val("target", {}, d=oas)
+
+        source_p =  safe_get_val("path_with_namespace","",d=source)
+        source_branch =  safe_get_val("source_branch","",d=oas)
+        target_p =  safe_get_val("path_with_namespace","",d=target)
+        target_branch =  safe_get_val("target_branch","",d=oas)
+        if source_p == target_p:
+            fmt_mr = f"Merge Request !{iid} from branch {source_branch} to {target_branch}"
+        else:
+            fmt_mr = f"Merge Request !{iid} from {source_p}/{source_branch} to {target_p}/{target_branch}"
+        if href:
+            return f"<a href='{url}'>{fmt_mr}</a>"
+        else:
+            return fmt_mr
+
+    def format_content(self):
+        from pprint import pprint
+        pprint(self.content)
+        shortendescr = True
+
+        user = self.get_main_user()
+        fmt_user = self.format_user(user)
+
+        project = self.get_project()
+        fmt_project = self.format_project(project)
+
+        oas = self.safe_get_val("object_attributes",{})
+
+        fmt_mr = MergeFormatter.format_mr(oas)
+
+        action =  self.safe_get_val("action", "did something unknown to",d=oas)
+        verb = self.get_verb_passive(action)
+
+
+        description = self.safe_get_val("note", "", d=oas)
+        if shortendescr:
+            fmt_description = description
+        else:
+            if description.count("\n") > 3:
+                fmt_description = "\n".join(description.split("\n")[:3])
+                fmt_description += "..."
+
+        if self.verbose and action == "open":
+            return f"{fmt_user} {verb} {fmt_mr} in {fmt_project}:<br/><pre><code>{fmt_description}</pre></code>"
+        else:
+            return f"{fmt_user} {verb} {fmt_mr} in {fmt_project}"
 
 
 
@@ -372,7 +450,7 @@ def format_event(event, content, verbose=False, emojis=True, asnotice=True):
             "Tag Push Hook" : TagPushFormatter,
             "Issue Hook" : IssueFormatter,
             "Note Hook" : NoteFormatter,
-            #"Merge Request Hook" : Formatter,
+            "Merge Request Hook" : MergeFormatter,
             #"Wiki Page Hook" : Formatter,
             #"Pipeline Hook" : Formatter,
             #"Job Hook" : Formatter,
