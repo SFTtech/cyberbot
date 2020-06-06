@@ -343,8 +343,6 @@ class NoteFormatter(Formatter):
 
 
     def format_content(self):
-        from pprint import pprint
-        pprint(self.content)
         shortendescr = True
         user = self.get_main_user()
         fmt_user = self.format_user(user)
@@ -408,8 +406,6 @@ class MergeFormatter(Formatter):
             return fmt_mr
 
     def format_content(self):
-        from pprint import pprint
-        pprint(self.content)
         shortendescr = True
 
         user = self.get_main_user()
@@ -441,6 +437,47 @@ class MergeFormatter(Formatter):
 
 
 
+class WikiFormatter(Formatter):
+
+    def get_verb_passive(self, action):
+        """
+        So far I have seen the following verbs: create, update, delete
+        """
+        # opened and reopened need an ed th the end
+        if action == "did something unknown to":
+            return action
+        else:
+            return action + "d"
+
+    def format_wiki_page(self, oas, href=True):
+        url = self.safe_get_val("web_url", "", d=oas)
+        title = self.safe_get_val("title", "", d=oas)
+        fmt = f"Wiki Page {title}"
+        if href:
+            return self.format_link(url, fmt)
+        else:
+            return fmt
+
+    def format_content(self):
+        shortendescr = True
+
+        user = self.get_main_user()
+        fmt_user = self.format_user(user)
+
+        project = self.get_project()
+        fmt_project = self.format_project(project)
+
+
+        oas = self.safe_get_val("object_attributes",{})
+        fmt_wiki = self.format_wiki_page(oas)
+
+
+        action =  self.safe_get_val("action", "did something unknown to",d=oas)
+        verb = self.get_verb_passive(action)
+
+        return f"{fmt_user} {verb} {fmt_wiki} in {fmt_project}"
+
+
 def format_event(event, content, verbose=False, emojis=True, asnotice=True):
     """
     TODO: change verbose to a verbosity level with multiple (>2) options
@@ -451,7 +488,7 @@ def format_event(event, content, verbose=False, emojis=True, asnotice=True):
             "Issue Hook" : IssueFormatter,
             "Note Hook" : NoteFormatter,
             "Merge Request Hook" : MergeFormatter,
-            #"Wiki Page Hook" : Formatter,
+            "Wiki Page Hook" : WikiFormatter,
             #"Pipeline Hook" : Formatter,
             #"Job Hook" : Formatter,
             }
