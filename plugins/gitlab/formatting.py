@@ -170,7 +170,7 @@ class PushFormatter(OtherUserFormatter):
             # TODO:
             pass
         else:
-            if href:
+            if href and url != "":
                 return f"{commit.title} ({self.format_link(commit.url,commit.ID[:7])})"
             else:
                 return f"{commit.title} ({commit.ID[0:7]})"
@@ -400,7 +400,7 @@ class MergeFormatter(Formatter):
             fmt_mr = f"Merge Request !{iid} from branch {source_branch} to {target_branch}"
         else:
             fmt_mr = f"Merge Request !{iid} from {source_p}/{source_branch} to {target_p}/{target_branch}"
-        if href:
+        if href and url != "":
             return f"<a href='{url}'>{fmt_mr}</a>"
         else:
             return fmt_mr
@@ -453,7 +453,7 @@ class WikiFormatter(Formatter):
         url = self.safe_get_val("web_url", "", d=oas)
         title = self.safe_get_val("title", "", d=oas)
         fmt = f"Wiki Page {title}"
-        if href:
+        if href and url != "":
             return self.format_link(url, fmt)
         else:
             return fmt
