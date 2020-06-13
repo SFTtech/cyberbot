@@ -469,6 +469,7 @@ class WikiFormatter(Formatter):
 def format_event(event, content, verbose=False, emojis=True, asnotice=True):
     """
     TODO: change verbose to a verbosity level with multiple (>2) options
+    returns None if event shouldn't be printed
     """
     formatters = {
             "Push Hook" : PushFormatter,
@@ -483,6 +484,8 @@ def format_event(event, content, verbose=False, emojis=True, asnotice=True):
 
     if event in formatters:
         return formatters[event](event, content, verbose, emojis, asnotice).format()
+    elif "Confidential" in event:
+        return None
     return f"Unknown event received: {event}. Please poke the maintainers."
 #    
 #    if event == "Note Hook":
