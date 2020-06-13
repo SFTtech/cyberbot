@@ -438,9 +438,9 @@ class WikiFormatter(Formatter):
             return action + "d"
 
     def format_wiki_page(self, oas, href=True):
-        url = oas.get("web_url", "")
+        url = oas.get("url", "")
         title = oas.get("title", "")
-        fmt = f"Wiki Page {title}"
+        fmt = f"Wiki Page <code>{title}</code>"
         if href and url != "":
             return self.format_link(url, fmt)
         else:
@@ -455,12 +455,10 @@ class WikiFormatter(Formatter):
         project = self.get_project()
         fmt_project = self.format_project(project)
 
-
         oas = self.content.get("object_attributes",{})
         fmt_wiki = self.format_wiki_page(oas)
 
-
-        action =  oas.get("action", "did something unknown to")
+        action = oas.get("action", "did something unknown to")
         verb = self.get_verb_passive(action)
 
         return f"{fmt_user} {verb} {fmt_wiki} in {fmt_project}"
@@ -478,8 +476,8 @@ def format_event(event, content, verbose=False, emojis=True, asnotice=True):
             "Note Hook" : NoteFormatter,
             "Merge Request Hook" : MergeFormatter,
             "Wiki Page Hook" : WikiFormatter,
-            #"Pipeline Hook" : Formatter,
-            #"Job Hook" : Formatter,
+            #"Pipeline Hook" : Formatter, TODO
+            #"Job Hook" : Formatter, TODO
             }
 
     if event in formatters:
@@ -487,16 +485,3 @@ def format_event(event, content, verbose=False, emojis=True, asnotice=True):
     elif "Confidential" in event:
         return None
     return f"Unknown event received: {event}. Please poke the maintainers."
-#    
-#    if event == "Note Hook":
-#        user_email = content['user']['email']
-#        user_name = content['user']['name']
-#        oa = content['object_attributes']
-#        noteable_type
-#
-#    # TODO: note hook
-#    # TODO: merge request hook
-#    # TODO: wiki hook
-#    # TODO: pipeline hook
-#    # TODO: job hook
-#
