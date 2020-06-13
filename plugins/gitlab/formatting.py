@@ -523,6 +523,41 @@ class PipelineFormatter(Formatter):
             return base
 
 
+class JobFormatter(Formatter):
+    emojidict = {
+            "success": "✅",
+            "fail": "❌",
+            "skipped": "➡️",
+            "created": "⬆️",
+            }
+
+    def format_project(self):
+        name =  self.content.get("project_name", "")
+        url = self.content.get("repository", {}).get("homepage", "")
+        return self.format_link(url, name)
+
+    def format_build(self):
+        name = self.content.get("build_name", "build")
+        stage = self.content.get("build_stage", "")
+        if stage != "":
+            stage = f"({stage})"
+        status = self.content.get("build_status", "unknown status")
+        if self.emojis:
+            emoji = self.emojidict.get(status,"")
+            if emoji != "":
+                emoji = f"{emoji} "
+            return f"{emoji}{name}{stage}: <code>{status}</code>"
+        else:
+            return f"{name}{stage}: <code>{status}</code>"
+
+    def format_content(self):
+        fmt_project = self.format_project()
+        fmt_build = self.format_build() 
+
+        base = f"Job Event: {fmt_build} in {fmt_project}"
+        return base
+
+
 def format_event(event, content, verbose=False, emojis=True, asnotice=True):
     """
     TODO: change verbose to a verbosity level with multiple (>2) options
@@ -536,7 +571,7 @@ def format_event(event, content, verbose=False, emojis=True, asnotice=True):
             "Merge Request Hook" : MergeFormatter,
             "Wiki Page Hook" : WikiFormatter,
             "Pipeline Hook" : PipelineFormatter,
-            #"Job Hook" : Formatter, TODO
+            "Job Hook" : JobFormatter,
             }
 
     if event in formatters:
