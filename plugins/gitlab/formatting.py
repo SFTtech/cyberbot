@@ -464,6 +464,65 @@ class WikiFormatter(Formatter):
         return f"{fmt_user} {verb} {fmt_wiki} in {fmt_project}"
 
 
+
+class PipelineFormatter(Formatter):
+    """
+    TODO: add hyperlinks
+    """
+    emojidict = {
+            "success": "✅",
+            "fail": "❌",
+            "skipped": "➡️",
+            "created": "⬆️",
+            }
+
+    def format_build(self, builddict):
+        name = builddict.get("name", "build")
+        stage = builddict.get("stage", "")
+        if stage != "":
+            stage = f"({stage})"
+        status = builddict.get("status", "unknown status")
+        if self.emojis:
+            emoji = self.emojidict.get(status,"")
+            if emoji != "":
+                emoji = f"{emoji} "
+            return f"{emoji}{name}{stage}: <code>{status}</code>"
+        else:
+            return f"{name}{stage}: <code>{status}</code>"
+
+    def format_pipeline(self, oas):
+        status = oas.get("status", "Unknown Status")
+        stages = oas.get("stages", [])
+        ref = oas.get("ref", "")
+        pid = oas.get("id", "")
+        source = oas.get("source")
+        if self.emojis:
+            statusemoji = self.emojidict.get(status,"")
+        return f"Pipeline {pid} triggered by {source} exited with status {statusemoji}<code>{status}</code>"
+
+    def format_content(self):
+        #user = self.get_main_user()
+        #fmt_user = self.format_user(user)
+
+        project = self.get_project()
+        fmt_project = self.format_project(project)
+
+        oas = self.content.get("object_attributes",{})
+        fmt_pipeline = self.format_pipeline(oas) 
+
+        base = f"{fmt_pipeline} in {fmt_project}"
+        if self.verbose or True:
+            base += "\n<ul>"
+            for build in self.content.get("builds", []):
+                base += "\n<li>"
+                base += self.format_build(build)
+                base += "</li>"
+            base += "\n</ul>"
+            return base
+        else:
+            return base
+
+
 def format_event(event, content, verbose=False, emojis=True, asnotice=True):
     """
     TODO: change verbose to a verbosity level with multiple (>2) options
@@ -476,7 +535,7 @@ def format_event(event, content, verbose=False, emojis=True, asnotice=True):
             "Note Hook" : NoteFormatter,
             "Merge Request Hook" : MergeFormatter,
             "Wiki Page Hook" : WikiFormatter,
-            #"Pipeline Hook" : Formatter, TODO
+            "Pipeline Hook" : PipelineFormatter,
             #"Job Hook" : Formatter, TODO
             }
 
