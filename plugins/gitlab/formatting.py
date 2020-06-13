@@ -511,7 +511,7 @@ class PipelineFormatter(Formatter):
         fmt_pipeline = self.format_pipeline(oas) 
 
         base = f"{fmt_pipeline} in {fmt_project}"
-        if self.verbose or True:
+        if self.verbose:
             base += "\n<ul>"
             for build in self.content.get("builds", []):
                 base += "\n<li>"
