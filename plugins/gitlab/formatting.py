@@ -86,11 +86,11 @@ class Formatter:
     def get_user_from_dict(self, userdict):
         self.defaultuser = User(ID="",name="", username="", email="", avatar_url="")
         return User(
-            ID=self.safe_get_val("id",self.defaultuser.ID,d=userdict),
-            name=self.safe_get_val("name",self.defaultuser.name,d=userdict),
-            username=self.safe_get_val("username",self.defaultuser.username,d=userdict),
-            email=self.safe_get_val("email",self.defaultuser.email,d=userdict),
-            avatar_url=self.safe_get_val("avatar_url", self.defaultuser.avatar_url)
+            ID=userdict.get("id",self.defaultuser.ID),
+            name=userdict.get("name",self.defaultuser.name),
+            username=userdict.get("username",self.defaultuser.username),
+            email=userdict.get("email",self.defaultuser.email),
+            avatar_url=self.content.get("avatar_url", self.defaultuser.avatar_url)
         )
 
     def get_main_user(self):
@@ -110,20 +110,12 @@ class Formatter:
             return self.defaultproject
         projectdict = self.content["project"]
         return Project(
-            ID=self.safe_get_val("id",self.defaultproject.ID,d=projectdict),
-            name=self.safe_get_val("name",self.defaultproject.name,d=projectdict),
-            description=self.safe_get_val("description",self.defaultproject.description,d=projectdict),
-            web_url=self.safe_get_val("web_url",self.defaultproject.web_url,d=projectdict)
+            ID=projectdict.get("id",self.defaultproject.ID),
+            name=projectdict.get("name",self.defaultproject.name),
+            description=projectdict.get("description",self.defaultproject.description),
+            web_url=projectdict.get("web_url",self.defaultproject.web_url)
         )
 
-
-    def safe_get_val(self, key,alternative, d=None):
-        if d is None:
-            d = self.content
-        if key in d:
-            return d[key]
-        else:
-            return alternative
 
 
 
@@ -134,11 +126,11 @@ class OtherUserFormatter(Formatter):
     """
     def get_main_user(self):
         return User(
-            ID=self.safe_get_val("user_id",self.defaultuser.ID),
-            name=self.safe_get_val("user_name",self.defaultuser.name),
-            username=self.safe_get_val("user_username",self.defaultuser.username),
-            email=self.safe_get_val("user_email",self.defaultuser.email),
-            avatar_url=self.safe_get_val("user_avatar",self.defaultuser.avatar_url)
+            ID=self.content.get("user_id",self.defaultuser.ID),
+            name=self.content.get("user_name",self.defaultuser.name),
+            username=self.content.get("user_username",self.defaultuser.username),
+            email=self.content.get("user_email",self.defaultuser.email),
+            avatar_url=self.content.get("user_avatar",self.defaultuser.avatar_url)
         )
 
 
@@ -170,7 +162,7 @@ class PushFormatter(OtherUserFormatter):
             # TODO:
             pass
         else:
-            if href and url != "":
+            if href and commit.url != "":
                 return f"{commit.title} ({self.format_link(commit.url,commit.ID[:7])})"
             else:
                 return f"{commit.title} ({commit.ID[0:7]})"
@@ -182,7 +174,7 @@ class PushFormatter(OtherUserFormatter):
         return "\n".join(f"<li>{self.format_commit(commit)}</li>" for commit in commits)
     
     def get_branch(self):
-        ref = self.safe_get_val("ref","")
+        ref = self.content.get("ref","")
         return ref.split("/")[-1]
 
     def commit_from_dict(self, commit):
@@ -191,14 +183,14 @@ class PushFormatter(OtherUserFormatter):
             if attr == "author" and "author" in commit:
                 attrs["author"] = self.get_user_from_dict(commit['author'])
             else:
-                attrs[attr]=self.safe_get_val(attr.lower(),getattr(self.defaultcommit,attr),d=commit)
+                attrs[attr]=commit.get(attr.lower(), getattr(self.defaultcommit,attr))
         return PushFormatter.Commit(**attrs)
 
     def get_commits(self):
-        commitdicts = self.safe_get_val("commits",[])
+        commitdicts = self.content.get("commits",[])
         commits = []
         for commit in commitdicts:
-            commits.append(commit_from_dict(commit))
+            commits.append(self.commit_from_dict(commit))
         return commits
                 
 
@@ -226,13 +218,13 @@ class TagPushFormatter(OtherUserFormatter):
             return f"tag {tagname}"
 
     def get_tag(self):
-        ref = self.safe_get_val("ref","")
+        ref = self.content.get("ref","")
         return ref.split("/")[-1]
 
     def get_verb_preposition(self):
         zeroes = "0000000000000000000000000000000000000000"
-        after = self.safe_get_val("after","")
-        before = self.safe_get_val("before","")
+        after = self.content.get("after","")
+        before = self.content.get("before","")
         if after == zeroes:
             return "deleted","from"
         elif before == zeroes:
@@ -275,11 +267,11 @@ class IssueFormatter(Formatter):
             #TODO
             pass
         else:
-            url = self.safe_get_val("url","",d=oas)
-            ID = self.safe_get_val("id","",d=oas)
+            url = oas.get("url","")
+            ID = oas.get("id","")
             if ID:
                 ID = "#" + str(ID)
-            title = self.safe_get_val("title","Unknown Title",d=oas)
+            title = oas.get("title","Unknown Title")
             res = f"{ID} {title}"
             if url and href:
                 return self.format_link(url,res)
@@ -292,8 +284,8 @@ class IssueFormatter(Formatter):
         user = self.get_main_user()
         fmt_user = self.format_user(user)
 
-        oas = self.safe_get_val("object_attributes",{})
-        action = self.safe_get_val("action","did something unknown to",d=oas)
+        oas = self.content.get("object_attributes",{})
+        action = oas.get("action","did something unknown to")
 
         verb = self.get_verb_passive(action)
         new = "new issue" if action == "open" else "issue"
@@ -316,25 +308,26 @@ class NoteFormatter(Formatter):
         if "noteable_type" not in oas:
             return f"Received invalid Comment Type (no noteable_type field in object_attributes)"
         comment_type = oas["noteable_type"]
-        comment_url = self.safe_get_val("url", "https://example.com", d=oas)
+        comment_url = oas.get("url", "https://example.com")
         if comment_type == "Issue":
-            comment_target = IssueFormatter(self.event, self.content, self.verbose, self.emojis, self.asnotice).format_issue(self.safe_get_val("issue", {}), href=False)
+            comment_target = IssueFormatter(self.event, self.content,
+                    self.verbose, self.emojis, self.asnotice).format_issue(self.content.get("issue", {}), href=False)
             fmt_comment_target = self.format_link(comment_url ,comment_target)
         elif comment_type == "Snippet":
-            snips = self.safe_get_val("snippet", {})
-            snippet_title = self.safe_get_val("title", "", d=snips)
-            snippet_content = self.safe_get_val("content", "", d=snips)
-            snippet_fname = self.safe_get_val("file_name", "", d=snips)
+            snips = self.content.get("snippet", {})
+            snippet_title = snips.get("title", "")
+            snippet_content = snips.get("content", "")
+            snippet_fname = snips.get("file_name", "")
             comment_target = f"{snippet_title} ({snippet_fname})"
             fmt_comment_target = "snippet " + self.format_link(comment_url ,comment_target)
         elif comment_type == "Commit":
             pf = PushFormatter(self.event, self.content, self.verbose, self.emojis, self.asnotice)
-            commit = pf.commit_from_dict(self.safe_get_val("commit", {}))
+            commit = pf.commit_from_dict(self.content.get("commit", {}))
             comment_target = pf.format_commit(commit, href=False)
             fmt_comment_target = self.format_link(comment_url ,comment_target)
             print(fmt_comment_target)
         elif comment_type == "MergeRequest":
-            mr = self.safe_get_val("merge_request",{})
+            mr = self.content.get("merge_request",{})
             comment_target = MergeFormatter.format_mr(mr, href=False)
             fmt_comment_target = self.format_link(comment_url ,comment_target)
         else:
@@ -349,10 +342,10 @@ class NoteFormatter(Formatter):
         project = self.get_project()
         fmt_project = self.format_project(project)
 
-        oas = self.safe_get_val("object_attributes",{})
+        oas = self.content.get("object_attributes",{})
 
         fmt_target = self.format_target(oas)
-        note = self.safe_get_val("note", "", d=oas)
+        note = oas.get("note", "")
         if self.verbose:
             fmt_note = note
         else:
@@ -382,20 +375,15 @@ class MergeFormatter(Formatter):
             return action + "d"
 
     def format_mr(oas, href=True):
-        def safe_get_val(a,b,d):
-            if a in d:
-                return d[a]
-            else:
-                return b
-        iid = safe_get_val("iid","",d=oas)
-        url = safe_get_val("url", "", d=oas)
-        source = safe_get_val("source", {}, d=oas)
-        target = safe_get_val("target", {}, d=oas)
+        iid = oas.get("iid","")
+        url = oas.get("url", "")
+        source = oas.get("source", {})
+        target = oas.get("target", {})
 
-        source_p =  safe_get_val("path_with_namespace","",d=source)
-        source_branch =  safe_get_val("source_branch","",d=oas)
-        target_p =  safe_get_val("path_with_namespace","",d=target)
-        target_branch =  safe_get_val("target_branch","",d=oas)
+        source_p =  source.get("path_with_namespace","")
+        source_branch =  oas.get("source_branch","")
+        target_p =  target.get("path_with_namespace","")
+        target_branch =  oas.get("target_branch","")
         if source_p == target_p:
             fmt_mr = f"Merge Request !{iid} from branch {source_branch} to {target_branch}"
         else:
@@ -414,15 +402,15 @@ class MergeFormatter(Formatter):
         project = self.get_project()
         fmt_project = self.format_project(project)
 
-        oas = self.safe_get_val("object_attributes",{})
+        oas = self.content.get("object_attributes",{})
 
         fmt_mr = MergeFormatter.format_mr(oas)
 
-        action =  self.safe_get_val("action", "did something unknown to",d=oas)
+        action =  oas.get("action", "did something unknown to")
         verb = self.get_verb_passive(action)
 
 
-        description = self.safe_get_val("note", "", d=oas)
+        description = oas.get("note", "")
         if shortendescr:
             fmt_description = description
         else:
@@ -450,8 +438,8 @@ class WikiFormatter(Formatter):
             return action + "d"
 
     def format_wiki_page(self, oas, href=True):
-        url = self.safe_get_val("web_url", "", d=oas)
-        title = self.safe_get_val("title", "", d=oas)
+        url = oas.get("web_url", "")
+        title = oas.get("title", "")
         fmt = f"Wiki Page {title}"
         if href and url != "":
             return self.format_link(url, fmt)
@@ -468,11 +456,11 @@ class WikiFormatter(Formatter):
         fmt_project = self.format_project(project)
 
 
-        oas = self.safe_get_val("object_attributes",{})
+        oas = self.content.get("object_attributes",{})
         fmt_wiki = self.format_wiki_page(oas)
 
 
-        action =  self.safe_get_val("action", "did something unknown to",d=oas)
+        action =  oas.get("action", "did something unknown to")
         verb = self.get_verb_passive(action)
 
         return f"{fmt_user} {verb} {fmt_wiki} in {fmt_project}"
