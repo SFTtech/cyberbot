@@ -59,7 +59,7 @@ class Formatter:
         """
         res = f"{user.name}"
         if user.email and self.verbose:
-            link = format_link(f"mailto:{user.email}", user.email)
+            link = self.format_link(f"mailto:{user.email}", user.email)
             res += f"({link})"
         return res
 
@@ -73,6 +73,15 @@ class Formatter:
         else:
             res = f"{project.name}"
         return res
+
+
+    def format_text_block(self, text, cut=True):
+        if cut and text.count("\n") > 3:
+            res = "\n".join(text.split("\n")[:3])
+            res += "..."
+        else:
+            res = text
+        return f"<pre><code>{res}</code></pre>"
 
 
 
@@ -159,8 +168,11 @@ class PushFormatter(OtherUserFormatter):
 
     def format_commit(self, commit, href=True):
         if self.verbose:
-            # TODO:
-            pass
+            fmt_message = self.format_text_block(commit.message, cut=True)
+            if href and commit.url != "":
+                return f"{commit.title} ({self.format_link(commit.url,commit.ID[:7])})</br>{fmt_message}"
+            else:
+                return f"{commit.title} ({commit.ID[0:7]})</br>{fmt_message}"
         else:
             if href and commit.url != "":
                 return f"{commit.title} ({self.format_link(commit.url,commit.ID[:7])})"
@@ -263,20 +275,16 @@ class IssueFormatter(Formatter):
             return action + "d"
 
     def format_issue(self, oas, href=True):
-        if self.verbose:
-            #TODO
-            pass
+        url = oas.get("url","")
+        ID = oas.get("id","")
+        if ID:
+            ID = "#" + str(ID)
+        title = oas.get("title","Unknown Title")
+        res = f"{ID} {title}"
+        if url and href:
+            return self.format_link(url,res)
         else:
-            url = oas.get("url","")
-            ID = oas.get("id","")
-            if ID:
-                ID = "#" + str(ID)
-            title = oas.get("title","Unknown Title")
-            res = f"{ID} {title}"
-            if url and href:
-                return self.format_link(url,res)
-            else:
-                return res
+            return res
 
     def format_content(self):
         project = self.get_project()
@@ -292,10 +300,8 @@ class IssueFormatter(Formatter):
         fmt_issue = self.format_issue(oas)
 
         if self.verbose:
-            # TODO
-            pass
-        else:
-            return f"{fmt_user} {verb} {new} {fmt_issue} in {fmt_project}"
+            pass #TODO: add more information
+        return f"{fmt_user} {verb} {new} {fmt_issue} in {fmt_project}"
 
 
 class NoteFormatter(Formatter):
@@ -346,16 +352,9 @@ class NoteFormatter(Formatter):
 
         fmt_target = self.format_target(oas)
         note = oas.get("note", "")
-        if self.verbose:
-            fmt_note = note
-        else:
-            if note.count("\n") > 3:
-                fmt_note = "\n".join(note.split("\n")[:3])
-                fmt_note += "..."
-            else:
-                fmt_note = note
+        fmt_note = self.format_text_block(note, cut=(not self.verbose))
 
-        return f"{fmt_user} commented on {fmt_target} in {fmt_project}:<br/><pre><code>{fmt_note}</pre></code>"
+        return f"{fmt_user} commented on {fmt_target} in {fmt_project}:<br/>{fmt_note}"
 
 
 
