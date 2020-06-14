@@ -2,6 +2,7 @@ import json
 import logging
 import asyncio
 import string
+import random
 import configparser
 
 
@@ -28,7 +29,7 @@ DEFAULTPATH = "/webhook" # unused
 
 class WebhookListener:
     """
-    The WebhookListener creates a http and https server, listens to gitlab
+    The WebhookListener creates a http server, listens to gitlab
     webhooks and triggers handler for the webhooks. It should be global and
     shared between multiple plugin instances
 
