@@ -276,11 +276,11 @@ class IssueFormatter(Formatter):
 
     def format_issue(self, oas, href=True):
         url = oas.get("url","")
-        ID = oas.get("id","")
-        if ID:
-            ID = "#" + str(ID)
+        IID = oas.get("iid","")
+        if IID:
+            IID = "#" + str(IID)
         title = oas.get("title","Unknown Title")
-        res = f"{ID} {title}"
+        res = f"{IID} {title}"
         if url and href:
             return self.format_link(url,res)
         else:
