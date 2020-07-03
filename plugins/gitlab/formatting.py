@@ -299,9 +299,22 @@ class IssueFormatter(Formatter):
         new = "new issue" if action == "open" else "issue"
         fmt_issue = self.format_issue(oas)
 
+
         if self.verbose:
             pass #TODO: add more information
-        return f"{fmt_user} {verb} {new} {fmt_issue} in {fmt_project}"
+        fmt = f"{fmt_user} {verb} {new} {fmt_issue} in {fmt_project}"
+        if action == "open":
+            description = oas.get('description', '')
+            shortendescr = True
+            if shortendescr:
+                fmt_description = description
+            else:
+                if description.count("\n") > 3:
+                    fmt_description = "\n".join(description.split("\n")[:3])
+                fmt_description += "..."
+            fmt += f":<br/><pre><code>{fmt_description}</pre></code>"
+        return fmt
+
 
 
 class NoteFormatter(Formatter):
@@ -409,7 +422,7 @@ class MergeFormatter(Formatter):
         verb = self.get_verb_passive(action)
 
 
-        description = oas.get("note", "")
+        description = oas.get("description", "")
         if shortendescr:
             fmt_description = description
         else:
@@ -417,7 +430,8 @@ class MergeFormatter(Formatter):
                 fmt_description = "\n".join(description.split("\n")[:3])
                 fmt_description += "..."
 
-        if self.verbose and action == "open":
+        #if self.verbose and action == "open":
+        if action == "open":
             return f"{fmt_user} {verb} {fmt_mr} in {fmt_project}:<br/><pre><code>{fmt_description}</pre></code>"
         else:
             return f"{fmt_user} {verb} {fmt_mr} in {fmt_project}"
