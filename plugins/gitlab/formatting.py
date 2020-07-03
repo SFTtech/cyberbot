@@ -166,24 +166,28 @@ class PushFormatter(OtherUserFormatter):
         else:
             return f"branch {branchname}"
 
-    def format_commit(self, commit, href=True):
+    def format_commit(self, commit, href=True, branch=False):
         if self.verbose:
             fmt_message = self.format_text_block(commit.message, cut=True)
             if href and commit.url != "":
-                return f"{commit.title} ({self.format_link(commit.url,commit.ID[:7])})</br>{fmt_message}"
+                fmt = f"{commit.title} ({self.format_link(commit.url,commit.ID[:7])})</br>{fmt_message}"
             else:
-                return f"{commit.title} ({commit.ID[0:7]})</br>{fmt_message}"
+                fmt = f"{commit.title} ({commit.ID[0:7]})</br>{fmt_message}"
         else:
             if href and commit.url != "":
-                return f"{commit.title} ({self.format_link(commit.url,commit.ID[:7])})"
+                fmt = f"{commit.title} ({self.format_link(commit.url,commit.ID[:7])})"
             else:
-                return f"{commit.title} ({commit.ID[0:7]})"
+                fmt = f"{commit.title} ({commit.ID[0:7]})"
+        if branch:
+            fmt = "⇨ "  + fmt
+        return fmt
+
 
     def format_commits(self, commits):
         """
         Maybe only print last commit for non verbose?
         """
-        return "\n".join(f"<li>{self.format_commit(commit)}</li>" for commit in commits)
+        return "\n".join(f"<li>{self.format_commit(commit, branch=(i==0))}</li>" for (i,commit) in enumerate(commits))
     
     def get_branch(self):
         ref = self.content.get("ref","")
@@ -203,6 +207,7 @@ class PushFormatter(OtherUserFormatter):
         commits = []
         for commit in commitdicts:
             commits.append(self.commit_from_dict(commit))
+        commits.reverse()
         return commits
                 
 
