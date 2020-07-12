@@ -36,8 +36,10 @@ https://gitlab.rbg.tum.de/cyber/cyber-matrix-bot/-/blob/master/PLUGINS.md
 
 # Screenshots
 
-*Gitlab Plugin*
+*Gitlab Plugin:*
+
 ![](res/screenshot_gitlab.png)
 
+---
 
 The Cyberbot™ is brought to you proudly by the [RBG Cybergroup](https://www.in.tum.de/rbg/)!
