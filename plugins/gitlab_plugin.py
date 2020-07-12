@@ -50,7 +50,7 @@ class WebhookListener:
         self.port = port
         self.url = url
         self.path = path
-        
+
 
     async def start(self):
         """
@@ -60,8 +60,25 @@ class WebhookListener:
             return
 
         async def handle_request(request):
+            if request.method == "GET":
+                logging.info(f"Gitlab: Got GET request to webhook. Sending ooops page.")
+                text = """
+<html>
+    <head>
+        <title>Ooooooooooops</title>
+    </head>
+
+    <body>
+        <p>Please don't open the url in your browser, but rather paste the url and the token into your page's gitlab webhook settings under Settings/Webhooks.</p>
+    </body>
+</html>
+"""
+                return web.Response(text=text, content_type='text/html')
+
             if request.path != self.path:
                 logging.info(f"Gitlab: ignoring request to wrong path: {request.path}")
+                return
+
             if request.method != "POST":
                 return web.Response(status=404)
 
