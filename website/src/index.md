@@ -15,7 +15,7 @@ Wir hosten einen Bot unter dem Namen `Cyberbot` und der Matrix-ID `@cyberbot:in.
 
 ## Ich habe ein Problem/ein Feature könnte besser sein
 
-Falls es ein Problem mit einem unserer Plugins oder dem Bot allgemein gibt oder ihr Verbesserungsvorschläge habt, dann schreibt uns bitte eine Mail an [cybergruppe@in.tum.de](mailto:cybergruppe@in.tum.de).
+Falls es ein Problem mit einem unserer Plugins oder dem Bot allgemein gibt oder ihr Verbesserungsvorschläge habt, dann schreibt uns bitte eine Mail an [rbg@in.tum.de](mailto:rbg@in.tum.de).
 
 ## Wo kann ich den Code einsehen?
 
@@ -43,3 +43,7 @@ https://gitlab.rbg.tum.de/cyber/cyber-matrix-bot/-/blob/master/PLUGINS.md
 ---
 
 The Cyberbot™ is brought to you proudly by the [RBG Cybergroup](https://www.in.tum.de/rbg/)!
+
+
+[Impressum](https://www.in.tum.de/rbg/impressum/)
+[Datenschutz](https://www.in.tum.de/rbg/datenschutz/)
