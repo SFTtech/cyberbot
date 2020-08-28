@@ -310,14 +310,15 @@ class IssueFormatter(Formatter):
         fmt = f"{fmt_user} {verb} {new} {fmt_issue} in {fmt_project}"
         if action == "open":
             description = oas.get('description', '')
-            shortendescr = True
-            if shortendescr:
-                fmt_description = description
-            else:
-                if description.count("\n") > 3:
-                    fmt_description = "\n".join(description.split("\n")[:3])
-                fmt_description += "..."
-            fmt += f":<br/><pre><code>{fmt_description}</pre></code>"
+            if description is not None and description.strip() != "":
+                shortendescr = True
+                if shortendescr:
+                    fmt_description = description
+                else:
+                    if description.count("\n") > 3:
+                        fmt_description = "\n".join(description.split("\n")[:3])
+                    fmt_description += "..."
+                fmt += f":<br/><pre><code>{fmt_description}</pre></code>"
         return fmt
 
 
