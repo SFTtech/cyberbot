@@ -20,7 +20,7 @@ HELP_DESC = ("!gitlab\t\t\t-\tGitlab Webhook Manager/Notifier 🦊\n")
 
 
 # Configuration
-CONFIGPATH = "./plugins/gitlab/gitlab.ini" # TODO: use same plugin path as bernd
+CONFIGPATH = "./plugins_examples/gitlab/gitlab.ini" # TODO: use same plugin path as bernd
 DEFAULTADDRESS = "*"
 DEFAULTPORT = 8080
 DEFAULTPATH = "/webhook" # unused

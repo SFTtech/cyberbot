@@ -12,11 +12,13 @@ from pathlib import Path
 
 class Plugin:
     def __init__(self, mroom, pluginid, pluginname):
+        self.mroom = mroom
+
         self.pluginid = pluginid
         self.pluginname = pluginname
+
         self.handlers = []
         self.module = None
-        self.mroom = mroom
         self.nio_room = mroom.nio_room
         self.bot = mroom.bot
         self.client = mroom.bot.client
@@ -25,25 +27,30 @@ class Plugin:
 
     async def load(self):
         filename = self.pluginname + "_plugin.py"
-        plugin_path = Path(self.mroom.bot.plugindir).resolve()
-        logging.info(f"Room {self.mroom.nio_room.room_id}: trying to load {plugin_path / filename}")
-        if (plugin_path / filename).exists():
-            modname = f'plugins.{self.pluginname}'
-            loader = importlib.machinery.SourceFileLoader(modname,
-                    str(plugin_path/filename))
-            try:
-                self.module = loader.load_module(modname)
-                self.module.ENVIRONMENT = self.mroom.bot.environment.copy()
-                await self.module.register_to(self)
-                return True
-            except Exception as e:
-                traceback.print_exc()
-                logging.warning(str(e))
-                return False
-        else:
+        full_plugin_path = None
+        for path in self.mroom.bot.pluginpath:
+            p = Path(path).resolve()
+            if (p / filename ).exists():
+                full_plugin_path = p / filename
+                break
+        if full_plugin_path is None:
             logging.warning(f"""
             Room {self.mroom.room_id}: couldn't load plugin {self.pluginname}: file does not exist
             """)
+            return False
+
+        logging.info(f"Room {self.mroom.nio_room.room_id}: trying to load {full_plugin_path}")
+        modname = f'plugins.{self.pluginname}'
+        loader = importlib.machinery.SourceFileLoader(modname,
+                str(full_plugin_path))
+        try:
+            self.module = loader.load_module(modname)
+            self.module.ENVIRONMENT = self.mroom.bot.environment.copy()
+            await self.module.register_to(self)
+            return True
+        except Exception as e:
+            traceback.print_exc()
+            logging.warning(str(e))
             return False
 
     def add_handler(self, handler):

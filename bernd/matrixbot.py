@@ -28,7 +28,7 @@ class MatrixBot:
             botname="Matrix Bot",
             deviceid="MATRIXBOT",
             dbpath="./matrixbot.sqlite",
-            plugindir="plugins",
+            pluginpath=[ "./plugins" ],
             store_path=None,
             environment={}):
 
@@ -47,7 +47,8 @@ class MatrixBot:
                 sys.exit(-1)
 
         # this is a small hack to add the plugins to the import search path
-        sys.path.append(plugindir)
+        for path in pluginpath:
+            sys.path.append(path)
 
 
         logging.info(f"Store path: {store_path}")
@@ -59,7 +60,7 @@ class MatrixBot:
 
         self.dbpath = dbpath
         self.load_db(dbpath)
-        self.plugindir = plugindir
+        self.pluginpath = pluginpath
         self.environment = environment
         self.last_sync_time = 0
 
@@ -98,7 +99,7 @@ credentials""")
         c = self.conn.cursor()
         tables = c.execute("""
             SELECT name
-            FROM sqlite_master 
+            FROM sqlite_master
             WHERE type ='table' AND name NOT LIKE 'sqlite_%';
             """).fetchall()
         if not all((t,) in tables for t in ["rooms", "room_plugins", "plugin_data"]):
@@ -143,11 +144,11 @@ credentials""")
                 self.active_rooms.add(mr)
 
 
-    
+
 
     async def read_plugins(self):
-        plugin_path = Path(self.plugindir)
-        logging.info("Reading available plugins from: {}".format(plugin_path))
+        plugin_paths = [Path(path) for path in self.pluginpath]
+        logging.info("Reading available plugins from: {}".format(plugin_paths))
 
         help_module = None
 
@@ -155,16 +156,17 @@ credentials""")
 
         # plugins must be called ...plugin.py, so other modules in the same
         # directory are not falsely loaded (allows for plugin decomposition)
-        for filename in plugin_path.glob("*_plugin.py"):
-            if filename.exists():
-                modname = f'plugins.{filename.stem}'
-                loader = importlib.machinery.SourceFileLoader(modname, str(filename))
-                try:
-                    module = loader.load_module(modname)
-                    pluginname = filename.stem.replace("_plugin","")
-                    self.available_plugins[pluginname] = module.HELP_DESC
-                except Exception as e:
-                    logging.warning(e)
+        for plugin_path in plugin_paths:
+            for filename in plugin_path.glob("*_plugin.py"):
+                if filename.exists():
+                    modname = f'plugins.{filename.stem}'
+                    loader = importlib.machinery.SourceFileLoader(modname, str(filename))
+                    try:
+                        module = loader.load_module(modname)
+                        pluginname = filename.stem.replace("_plugin","")
+                        self.available_plugins[pluginname] = module.HELP_DESC
+                    except Exception as e:
+                        logging.warning(e)
 
 
     async def listen(self):

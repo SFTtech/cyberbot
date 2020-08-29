@@ -12,7 +12,7 @@ from matrixbot import MatrixBot
 import nio
 
 DEFAULT_BOTNAME = "Matrix Bot"
-DEFAULT_PLUGINPATH = "plugins"
+DEFAULT_PLUGINPATH = "./plugins"
 DEFAULT_DEVICEID = "MATRIXBOT"
 DEFAULT_DBPATH = "./matrixbot.sqlite"
 
@@ -59,7 +59,7 @@ config file exists and all fields are available""")
     password   = vals['PASSWORD']
     server     = vals['SERVER']
     botname    = vals.get("BOTNAME", DEFAULT_BOTNAME)
-    pluginpath = vals.get("PLUGINPATH", DEFAULT_PLUGINPATH)
+    pluginpath = [p.strip() for p in vals.get("PLUGINPATH", DEFAULT_PLUGINPATH).split(";")]
     deviceid   = vals.get("DEVICEID", DEFAULT_DEVICEID)
     store_path = vals.get("STOREPATH", "")
     dbpath     = vals.get("DBPATH", DEFAULT_DBPATH)
@@ -74,7 +74,7 @@ config file exists and all fields are available""")
             deviceid=deviceid,
             store_path=store_path,
             environment=environment,
-            plugindir=pluginpath,
+            pluginpath=pluginpath,
             dbpath=dbpath
             ) as bot:
         await bot.load_rooms()
