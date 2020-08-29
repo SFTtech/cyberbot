@@ -19,7 +19,7 @@ The `plugin` argument exposes a lot of functionality via helper-functions, e.g.:
 - functions for creating asyncio task
 
 
-For more information look into the file bernd/plugin.py.
+For more information look into the file cyberbot/plugin.py.
 
 Plugins operate on a room level, meaning that each room that adds your plugin
 will load an own instance of your plugin's module.

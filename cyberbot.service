@@ -1,5 +1,5 @@
 [Unit]
-Description=Bernd Lauert Matrix Chatbot
+Description=Matrix Chatbot
 After=multi-user.target
 Requires=multi-user.target
 
@@ -7,7 +7,7 @@ Requires=multi-user.target
 Type=simple
 User=bernd
 WorkingDirectory=/srv/cyber-matrix-bot
-ExecStart=/srv/cyber-matrix-bot/venv/bin/python3 ./bernd -c ./rbg.ini
+ExecStart=/srv/cyber-matrix-bot/venv/bin/python3 ./cyberbot -c ./rbg.ini
 Restart=always
 RestartSec=3
 

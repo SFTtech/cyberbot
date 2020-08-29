@@ -47,7 +47,7 @@ let
   ];
 
 in buildEnv {
-  name = "bernd-env";
+  name = "cyberbot-env";
   paths = [
     (python3.withPackages (ps: python-requirements ps))
   ];
