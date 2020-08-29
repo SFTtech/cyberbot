@@ -12,7 +12,7 @@ from matrixbot import MatrixBot
 import nio
 
 DEFAULT_BOTNAME = "Matrix Bot"
-DEFAULT_PLUGINPATH = "./plugins"
+DEFAULT_PLUGINPATH = "./plugins;./plugins_examples"
 DEFAULT_DEVICEID = "MATRIXBOT"
 DEFAULT_DBPATH = "./matrixbot.sqlite"
 
