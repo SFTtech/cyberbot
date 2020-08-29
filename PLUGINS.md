@@ -1,9 +1,9 @@
 **Creating Plugins**
 ----------------
 
-Plugins are python files which are located in the `plugins` folder.
+Plugins are python files which are located in one of the plugin folders specified in the PLUGINPATH in your config.
 
-They must end in `.py` to be recognized by the bot.
+They must end in `_plugin.py` to be recognized by the bot.
 
 Each plugin must contain a global `HELP_DESC` variable with a short string
 explaining the plugin.

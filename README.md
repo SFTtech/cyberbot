@@ -1,10 +1,7 @@
-**Bernd Lauert**
+**Cyberbot**
 ----------------
 
-A matrix chatbot, originally designed for the [*StuStaNet
-e.V.*](http://vereinsanzeiger.stustanet.de/) administrator chatroom
-(#admins:stusta.de), written in python.
-Adopted for the RBG at TUM.
+A matrix chatbot written in python.
 
 **Requirements**:
 
@@ -15,9 +12,11 @@ folder for correct execution.
 
 **Execution**:
 
-Specify the login credentials and server for the bot, in
+Specify the login credentials and server for the bot and the plugin locations in
 the provided *config.ini* file.
 Quotes should be generally omitted in the file.
+
+An example ini file can be found in the repository.
 
 After the bot has been configured, issue:
 
@@ -41,9 +40,9 @@ of them into your room.
 
 The bot itself only uses the basic functionality of the `matrix-nio` module
 to establish a matrix connection. All higher functionality is implemented in
-*plugin files*. These plugins need to be located in the *plugins* folder.
+*plugin files*. These plugins need to be located one of the folders specified in the `PLUGINPATH` in your config file.
 
-Every plugin needs to define a `register_to(plugin)` function, which is called upon
+Every plugin needs to define an async `register_to(plugin)` function, which is called upon
 plugin loading, and a `HELP_DESC` variable, containing a string with a short
 textual description of its features.
 
