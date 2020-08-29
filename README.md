@@ -21,7 +21,7 @@ An example ini file can be found in the repository.
 After the bot has been configured, issue:
 
 ```sh
-python bernd -c <config_file>
+python cyberbot -c <config_file>
 ```
 
 To add the bot to a room, invite it via your matrix client. The bot will join
