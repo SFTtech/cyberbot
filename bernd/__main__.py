@@ -53,17 +53,16 @@ async def main():
 config file exists and all fields are available""")
         sys.exit(-1)
 
-    check_default = lambda attr,default_val: vals[attr] if attr in vals else default_val
     vals = config['BotMatrixId']
 
     username   = vals['USERNAME']
     password   = vals['PASSWORD']
     server     = vals['SERVER']
-    botname    = check_default("BOTNAME", DEFAULT_BOTNAME)
-    pluginpath = check_default("PLUGINPATH", DEFAULT_PLUGINPATH)
-    deviceid   = check_default("DEVICEID", DEFAULT_DEVICEID)
-    store_path = check_default("STOREPATH", "")
-    dbpath     = check_default("DBPATH", DEFAULT_DBPATH)
+    botname    = vals.get("BOTNAME", DEFAULT_BOTNAME)
+    pluginpath = vals.get("PLUGINPATH", DEFAULT_PLUGINPATH)
+    deviceid   = vals.get("DEVICEID", DEFAULT_DEVICEID)
+    store_path = vals.get("STOREPATH", "")
+    dbpath     = vals.get("DBPATH", DEFAULT_DBPATH)
 
     environment = dict((k.upper(),v) for k,v in dict(vals).items()
                                      if k.lower() != 'password')
