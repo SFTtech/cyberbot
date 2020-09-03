@@ -84,6 +84,21 @@ class Formatter:
         return f"<pre><code>{res}</code></pre>"
 
 
+    def get_verb_passive(self, action):
+        """
+        So far I have seen the following verbs: open, reopen, close, update, approve
+        """
+        # opened and reopened need an ed th the end
+        if action == "did something unknown to":
+            return action
+        elif action.endswith("ed"):
+            return action
+        elif action.endswith("e"):
+            return action + "d"
+        else:
+            return action + "ed"
+
+
 
 
     # =============
@@ -267,18 +282,6 @@ class TagPushFormatter(OtherUserFormatter):
 
 class IssueFormatter(Formatter):
 
-    def get_verb_passive(self, action):
-        """
-        So far I have seen the following verbs: open, reopen, close, update
-        """
-        # opened and reopened need an ed th the end
-        if "open" in action:
-            return action + "ed"
-        if action == "did something unknown to":
-            return action
-        else:
-            return action + "d"
-
     def format_issue(self, oas, href=True):
         url = oas.get("url","")
         IID = oas.get("iid","")
@@ -379,18 +382,6 @@ class NoteFormatter(Formatter):
 
 
 class MergeFormatter(Formatter):
-
-    def get_verb_passive(self, action):
-        """
-        So far I have seen the following verbs: open, reopen, close, update
-        """
-        # opened and reopened need an ed th the end
-        if "open" in action:
-            return action + "ed"
-        if action == "did something unknown to":
-            return action
-        else:
-            return action + "d"
 
     def format_mr(oas, href=True):
         iid = oas.get("iid","")
