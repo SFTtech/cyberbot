@@ -2,7 +2,6 @@ argparse
 configparser
 importlib2
 pathlib
-PyMVGLive
 feedparser
 matrix-nio[e2e]
 aiohttp
