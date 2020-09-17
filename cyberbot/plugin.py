@@ -164,6 +164,10 @@ class Plugin:
         return k.members
 
 
+    async def invite(self, user_id):
+        await self.client.room_invite(self.nio_room.room_id, user_id)
+
+
     async def send_image(self, filename):
         p = pathlib.Path(filename)
         extension = p.suffix.lower()[1:]
