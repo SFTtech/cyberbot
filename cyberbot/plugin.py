@@ -297,3 +297,10 @@ class Plugin:
     @staticmethod
     def extract_args(event):
         return shlex.split(event.source['content']['body'])
+
+    @staticmethod
+    def get_sender_id(event):
+        return event.sender
+
+    async def get_sender_name(self, event):
+        return (await self.client.get_displayname(event.sender)).displayname
