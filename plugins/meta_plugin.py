@@ -2,7 +2,7 @@ import asyncio
 
 HELP_DESC = ("""
 !listplugins\t\t\t-\tlist addable plugins
-!addplugin plugin [plugin2 ...]\t-\tadd plugin(s)
+!addplugin plugin [plugin2 ...]\t-\tadd plugin(s) (--all for all)
 !remplugin plugin [plugin2 ...]\t-\tremove plugin(s)
 !reload\t\t\t\t-\tReload plugins
 """)
@@ -29,8 +29,13 @@ async def register_to(plugin):
 
 
     async def addplugin_callback(room, event):
+        curr_plugins =  [p.pluginname for p in plugin.mroom.plugins]
         args = event.source['content']['body'].split()
-        await asyncio.gather(*(plugin.mroom.add_plugin(pname) for pname in args[1:]))
+        if len(args) > 1 and args[1] == "--all":
+            await asyncio.gather(*(plugin.mroom.add_plugin(pname) for pname in plugin.mroom.bot.available_plugins if pname not in curr_plugins))
+        else:
+            await asyncio.gather(*(plugin.mroom.add_plugin(pname) for pname in args[1:] if pname not in curr_plugins))
+
         await plugin.send_text("Call !help to see new plugins")
 
     addplugin_handler = plugin.CommandHandler("addplugin", addplugin_callback)
