@@ -20,7 +20,6 @@ HELP_DESC = ("!gitlab\t\t\t-\tGitlab Webhook Manager/Notifier 🦊\n")
 
 
 # Configuration
-# TODO: use same plugin path as bernd
 CONFIGPATH = "./plugins_examples/gitlab/gitlab.ini"
 DEFAULTADDRESS = "*"
 DEFAULTPORT = 8080
@@ -200,11 +199,18 @@ class LocalHookManager:
         called by WebhookListener when a hook event occurs
         """
         logging.info(f"Token event received: {event}")
+        if "config" in await self.plugin.kvstore_get_keys():
+            config = json.loads(await self.plugin.kvstore_get_value("config"))
+        else:
+            config = DEFAULTCONFIG
         text = fmt.format_event(
-            event, content, verbose=False, emojis=True, asnotice=False)
+            event, content, verbose=False, emojis=config['emoji'], asnotice=config['notification'])
         # await self.plugin.send_notice(text)
         if text is not None:
-            await self.plugin.send_html(text)
+            if config['notification']:
+                await self.plugin.send_htmlnotice(text)
+            else:
+                await self.plugin.send_html(text)
         # await self.plugin.send_htmlnotice(text)
         # await self.plugin.send_html(text)
         # text = format_event(event, content, verbose=True, use="text") # defined at the bottom
