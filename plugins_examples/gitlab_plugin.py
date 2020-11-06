@@ -20,11 +20,16 @@ HELP_DESC = ("!gitlab\t\t\t-\tGitlab Webhook Manager/Notifier 🦊\n")
 
 
 # Configuration
-CONFIGPATH = "./plugins_examples/gitlab/gitlab.ini" # TODO: use same plugin path as bernd
+# TODO: use same plugin path as bernd
+CONFIGPATH = "./plugins_examples/gitlab/gitlab.ini"
 DEFAULTADDRESS = "*"
 DEFAULTPORT = 8080
-DEFAULTPATH = "/webhook" # unused
+DEFAULTPATH = "/webhook"  # unused
 
+DEFAULTCONFIG = {
+    "emoji": True,
+    "notification": True,
+}
 
 
 class WebhookListener:
@@ -38,19 +43,19 @@ class WebhookListener:
     """
 
     def __init__(self,
-            address="*",
-            port="8080",
-            url="localhost",
-            path="/webhook"):
-        self.tokens = defaultdict(list) # maps a secrettoken on a list of handlers
+                 address="*",
+                 port="8080",
+                 url="localhost",
+                 path="/webhook"):
+        # maps a secrettoken on a list of handlers
+        self.tokens = defaultdict(list)
         self.is_running = False
-        self.currenthid = 0 # unique ids for new hooks
+        self.currenthid = 0  # unique ids for new hooks
 
         self.address = address
         self.port = port
         self.url = url
         self.path = path
-
 
     async def start(self):
         """
@@ -88,7 +93,7 @@ class WebhookListener:
                 return web.Response(status=400)
 
             if token in self.tokens:
-                handlers = [handler for (hid,handler) in self.tokens[token]]
+                handlers = [handler for (hid, handler) in self.tokens[token]]
                 c = await request.content.read()
                 with open("hookslog.txt", "ab+") as f:
                     f.write(c)
@@ -101,7 +106,7 @@ class WebhookListener:
                     return web.Response(status=400)
 
                 await asyncio.gather(
-                        *(handler.handle(token, event, content) for handler in handlers))
+                    *(handler.handle(token, event, content) for handler in handlers))
                 return web.Response(text="OK")
 
         self.server = web.Server(handle_request)
@@ -117,7 +122,6 @@ class WebhookListener:
         self.currenthid += 1
         return str(self.currenthid)
 
-
     async def register_hook(self, secrettoken, handler):
         """
         handler has to be a async function and has to have a method
@@ -125,7 +129,7 @@ class WebhookListener:
         the gitlab event and content ist the parsed json from the webhook post
         """
         hookid = await self.nexthookid()
-        self.tokens[secrettoken].append((hookid,handler))
+        self.tokens[secrettoken].append((hookid, handler))
         return hookid
 
     async def deregister_hook(self, token, hookid):
@@ -144,6 +148,7 @@ class LocalHookManager:
     A LocalHookManager loads and stores secrettokens and registers them to the
     webhooklistener
     """
+
     def __init__(self, plugin, whl):
         """
         whl: webhook listener
@@ -195,18 +200,17 @@ class LocalHookManager:
         called by WebhookListener when a hook event occurs
         """
         logging.info(f"Token event received: {event}")
-        text = fmt.format_event(event, content, verbose=False, emojis=True, asnotice=False)
-        #await self.plugin.send_notice(text)
+        text = fmt.format_event(
+            event, content, verbose=False, emojis=True, asnotice=False)
+        # await self.plugin.send_notice(text)
         if text is not None:
             await self.plugin.send_html(text)
-        #await self.plugin.send_htmlnotice(text)
-        #await self.plugin.send_html(text)
-        #text = format_event(event, content, verbose=True, use="text") # defined at the bottom
-        #await self.plugin.send_notice(text)
-        #await self.plugin.send_text(text)
-        #await self.plugin.send_html(text)
-
-
+        # await self.plugin.send_htmlnotice(text)
+        # await self.plugin.send_html(text)
+        # text = format_event(event, content, verbose=True, use="text") # defined at the bottom
+        # await self.plugin.send_notice(text)
+        # await self.plugin.send_text(text)
+        # await self.plugin.send_html(text)
 
 
 if "webhook_listener" not in globals():
@@ -217,16 +221,17 @@ if "webhook_listener" not in globals():
     config.read(CONFIGPATH)
     if "server" not in config or "exposed" not in config or \
         "address" not in config["server"] or "port" not in config["server"] or \
-        "url" not in config["exposed"] or "path" not in config["exposed"]:
-        logging.warning("Gitlab: invalid config file, falling back to defaults")
+            "url" not in config["exposed"] or "path" not in config["exposed"]:
+        logging.warning(
+            "Gitlab: invalid config file, falling back to defaults")
         config["server"] = {
-                "address" : DEFAULTADDRESS,
-                "port" : DEFAULTPORT,
-            }
+            "address": DEFAULTADDRESS,
+            "port": DEFAULTPORT,
+        }
         config["exposed"] = {
-                "url" : "http" + DEFAULTADDRESS + f":{DEFAULTPORT}",
-                "path" : DEFAULTPATH,
-            }
+            "url": "http" + DEFAULTADDRESS + f":{DEFAULTPORT}",
+            "path": DEFAULTPATH,
+        }
     p = config["exposed"]["path"]
     p = "/" + p if not p.startswith("/") else p
     webhook_listener = WebhookListener(address=config["server"]["address"],
@@ -242,7 +247,6 @@ async def destructor(plugin):
     webhook_listener.currenthid = 0
 
 
-
 async def register_to(plugin):
 
     subcommands = """gitlab [subcommand] [option1 option2 ...]
@@ -250,6 +254,7 @@ Available subcommands:
     newhook                 - generate secrettoken for a new webhooks
     remhook hooknbr         - remove a webhook subscription
     listhooks               - show subscribed webhooks
+    config                  - change the way that notifications are printed
 
 How does it work? 🦊
     You first create a new secret token for a hook using the 'newhook' command.
@@ -267,7 +272,6 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
     lhm = LocalHookManager(plugin, webhook_listener)
     await lhm.load_tokens()
 
-
     def format_help(text):
         html_text = "<pre><code>" + text + "</code></pre>\n"
         return html_text
@@ -275,7 +279,6 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
     async def show_help():
         formatted_subcommands = format_help(subcommands)
         await plugin.send_html(formatted_subcommands, subcommands)
-
 
     async def handle_newhook(args):
         chars = string.ascii_letters + string.digits
@@ -288,7 +291,6 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
         html = f"URL: {url}\ntoken: {token}"
         await plugin.send_html(format_help(html))
 
-
     async def handle_remhook(args):
         if not args:
             await show_help()
@@ -297,20 +299,34 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
                 await plugin.send_text("Successfully removed token")
             else:
                 await plugin.send_text("Invalid Tokennr")
-            
 
     async def handle_listhooks(args):
-        html = "\n".join(f"{tokenid} - " + token[:4] + (len(token)-4)*"*" \
-                for (tokenid,token) in lhm.tokens.items())
+        html = "\n".join(f"{tokenid} - " + token[:4] + (len(token)-4)*"*"
+                         for (tokenid, token) in lhm.tokens.items())
         await plugin.send_html(format_help(html))
 
+    async def handle_config(args):
+        # setup default config
+        if "config" not in await plugin.kvstore_get_keys():
+            await plugin.kvstore_set_value("config", json.dumps(DEFAULTCONFIG))
+
+        config = json.loads(await plugin.kvstore_get_value("config"))
+        if len(args) == 0:
+            await plugin.send_html(format_help("\n".join(f"{k}:\t{v}" for k,v
+                in config.items()) + "\nPlease use !gitlab config set KEY VAL for changing a value"))
+        elif len(args) == 3 and args[0] == "set" and args[1] in config and args[2].lower() in ["true", "false"]:
+            config[args[1]] = (args[2].lower() == "true")
+            await plugin.kvstore_set_value("config", json.dumps(config))
+            await plugin.send_text(f"Successfully changed {args[1]} to {args[2]}")
+        else:
+            await plugin.send_text("Please use !gitlab config set <key> <val> for changing a value")
 
     async def gitlab_callback(room, event):
-#        fmttest='''Thomas(thomas@example.com) pushed to branch master of project cyber-slurm https://gitlab.rbg.tum.de/cyber/cyber-slurm/-/tree/master
-#- Fix bug 1 (test.com)
-#- Fix readme (test.com)
-#'''
-        #await plugin.send_notice(fmttest)
+        #        fmttest='''Thomas(thomas@example.com) pushed to branch master of project cyber-slurm https://gitlab.rbg.tum.de/cyber/cyber-slurm/-/tree/master
+        #- Fix bug 1 (test.com)
+        #- Fix readme (test.com)
+        #'''
+        # await plugin.send_notice(fmttest)
         args = plugin.extract_args(event)
         args.pop(0)
         if len(args) == 0:
@@ -324,9 +340,11 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
         elif args[0] == "listhooks":
             args.pop(0)
             await handle_listhooks(args)
+        elif args[0] == "config":
+            args.pop(0)
+            await handle_config(args)
         else:
             await show_help()
 
     gitlab_handler = plugin.CommandHandler("gitlab", gitlab_callback)
     plugin.add_handler(gitlab_handler)
-
