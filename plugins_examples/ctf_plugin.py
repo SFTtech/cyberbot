@@ -13,6 +13,11 @@ async def register_to(plugin):
     def format_block(text):
         return f"<pre><code>{text}</pre></code>"
 
+    def get_arg_as_single(event):
+        args = plugin.extract_args(event)
+        args.pop(0)
+        return " ".join(args)
+
     async def get_displayname(user_id):
         return (await plugin.client.get_displayname(user_id)).displayname
 
@@ -28,14 +33,12 @@ async def register_to(plugin):
 
     async def doing_callback(room, event):
         nonlocal mapping
-        args = plugin.extract_args(event)
-        args.pop(0)
+        arg = get_arg_as_single(event)
 
-        for arg in args:
-            if arg not in mapping:
-                mapping[arg] = [event.source['sender']]
-            elif event.source['sender'] not in mapping[arg]:
-                mapping[arg].append(event.source['sender'])
+        if arg not in mapping:
+            mapping[arg] = [event.source['sender']]
+        elif event.source['sender'] not in mapping[arg]:
+            mapping[arg].append(event.source['sender'])
         await print_mapping()
 
     async def cleardoing_callback(room, event):
@@ -45,33 +48,23 @@ async def register_to(plugin):
 
     async def done_callback(room, event):
         nonlocal mapping
-        args = plugin.extract_args(event)
-        args.pop(0)
+        arg = get_arg_as_single(event)
 
-        if len(args) != 1:
-            await plugin.send_text(HELP_DESC)
-            return
-
-        if (args[0] in mapping):
+        if (arg in mapping):
             sender_id = event.source['sender']
             if sender_id in mapping[args[0]]:
-                mapping[args[0]].remove(sender_id)
-                if len(mapping[args[0]]) == 0:
-                    mapping.pop(args[0])
+                mapping[arg].remove(sender_id)
+                if len(mapping[arg]) == 0:
+                    mapping.pop(arg)
 
         await print_mapping()
 
     async def finished_callback(room, event):
         nonlocal mapping
-        args = plugin.extract_args(event)
-        args.pop(0)
+        arg = get_arg_as_single(event)
 
-        if len(args) != 1:
-            await plugin.send_text(HELP_DESC)
-            return
-
-        if (args[0] in mapping):
-            mapping.pop(args[0])
+        if (arg in mapping):
+            mapping.pop(arg)
 
         await print_mapping()
 
