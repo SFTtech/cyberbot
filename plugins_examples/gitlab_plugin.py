@@ -157,8 +157,8 @@ class LocalHookManager:
         self.whl = whl
 
     async def load_tokens(self):
-        if "gitlabtokens" in await self.plugin.kvstore_get_keys():
-            jsondata = await self.plugin.kvstore_get_value("gitlabtokens")
+        if "gitlabtokens" in await self.plugin.kvstore_get_local_keys():
+            jsondata = await self.plugin.kvstore_get_local_value("gitlabtokens")
             try:
                 tokenlist = json.loads(jsondata)
             except:
@@ -175,7 +175,7 @@ class LocalHookManager:
     async def store_tokens(self):
         if self.tokens is not None:
             jsondata = json.dumps(list(self.tokens.values()))
-            await self.plugin.kvstore_set_value("gitlabtokens", jsondata)
+            await self.plugin.kvstore_set_local_value("gitlabtokens", jsondata)
 
     async def add_token(self, token, store=True):
         tokenid = await self.whl.register_hook(token, self)
@@ -199,8 +199,8 @@ class LocalHookManager:
         called by WebhookListener when a hook event occurs
         """
         logging.info(f"Token event received: {event}")
-        if "config" in await self.plugin.kvstore_get_keys():
-            config = json.loads(await self.plugin.kvstore_get_value("config"))
+        if "config" in await self.plugin.kvstore_get_local_keys():
+            config = json.loads(await self.plugin.kvstore_get_local_value("config"))
         else:
             config = DEFAULTCONFIG
         text = fmt.format_event(
@@ -313,16 +313,16 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
 
     async def handle_config(args):
         # setup default config
-        if "config" not in await plugin.kvstore_get_keys():
-            await plugin.kvstore_set_value("config", json.dumps(DEFAULTCONFIG))
+        if "config" not in await plugin.kvstore_get_local_keys():
+            await plugin.kvstore_set_local_value("config", json.dumps(DEFAULTCONFIG))
 
-        config = json.loads(await plugin.kvstore_get_value("config"))
+        config = json.loads(await plugin.kvstore_get_local_value("config"))
         if len(args) == 0:
             await plugin.send_html(format_help("\n".join(f"{k}:\t{v}" for k,v
                 in config.items()) + "\nPlease use !gitlab config set KEY VAL for changing a value"))
         elif len(args) == 3 and args[0] == "set" and args[1] in config and args[2].lower() in ["true", "false"]:
             config[args[1]] = (args[2].lower() == "true")
-            await plugin.kvstore_set_value("config", json.dumps(config))
+            await plugin.kvstore_set_local_value("config", json.dumps(config))
             await plugin.send_text(f"Successfully changed {args[1]} to {args[2]}")
         else:
             await plugin.send_text("Please use !gitlab config set <key> <val> for changing a value")

@@ -29,7 +29,7 @@ def setup_logging(verbose=False):
 def setup_cli():
     # Interpret command line arguments
     cli = argparse.ArgumentParser()
-    cli.add_argument("-c", "--config", default="/etc/prism/config.py",
+    cli.add_argument("-c", "--config",
                      help="path to the configuration file")
     cli.add_argument("-v", action="store_true", help="Enable verbose output")
     return cli
@@ -79,6 +79,7 @@ config file exists and all fields are available""")
             ) as bot:
         await bot.load_rooms()
         await bot.read_plugins()
+        await bot.enter_plugins_to_db()
         await bot.listen()
 
 

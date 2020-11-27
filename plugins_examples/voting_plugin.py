@@ -133,18 +133,18 @@ async def register_to(plugin):
 
         @classmethod
         async def load(cls):
-            keys = await plugin.kvstore_get_keys()
+            keys = await plugin.kvstore_get_local_keys()
 
             if "active_polls" not in keys:
                 active_polls = []
             else:
-                j = json.loads(await plugin.kvstore_get_value("active_polls"))
+                j = json.loads(await plugin.kvstore_get_local_value("active_polls"))
                 active_polls = [await Poll.from_list(l) for l in j]
 
             if "onlyadmincreators" not in keys:
                 onlyadmincreators = False
             else:
-                onlyadmincreators = bool(await plugin.kvstore_get_value("onlyadmincreators"))
+                onlyadmincreators = bool(await plugin.kvstore_get_local_value("onlyadmincreators"))
 
             v = Voting(active_polls,onlyadmincreators)
             return v
@@ -153,8 +153,8 @@ async def register_to(plugin):
         async def save(self):
             active_polls = [poll.to_list() for poll in self.active_polls]
             j = json.dumps(active_polls)
-            await plugin.kvstore_set_value("active_polls", j)
-            await plugin.kvstore_set_value("onlyadmincreators", str(self.onlyadmincreators))
+            await plugin.kvstore_set_local_value("active_polls", j)
+            await plugin.kvstore_set_local_value("onlyadmincreators", str(self.onlyadmincreators))
 
 
         async def add_poll(self, creator, name, options, duration=None):

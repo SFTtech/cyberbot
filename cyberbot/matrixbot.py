@@ -65,6 +65,8 @@ class MatrixBot:
         self.last_sync_time = 0
 
         self.active_rooms = set()
+        self.available_plugins = {}
+
 
 
     async def login(self):
@@ -102,25 +104,52 @@ credentials""")
             FROM sqlite_master
             WHERE type ='table' AND name NOT LIKE 'sqlite_%';
             """).fetchall()
-        if not all((t,) in tables for t in ["rooms", "room_plugins", "plugin_data"]):
+        # attention here, meaning of "plugin_data" has changed
+        # room_data: global room data
+        # plugin_data: global plugin data
+        # room_plugin_data: data local to a plugin x room combination
+        # room_plugins: which plugins are loaded in which room
+        if not all((t,) in tables for t in ["rooms", "plugins", "room_plugins", "room_data", "plugin_data", "room_plugin_data"]):
             c.execute("""
             CREATE TABLE rooms (
                 roomid     VARCHAR PRIMARY KEY
             );
             """)
             c.execute("""
+            CREATE TABLE plugins (
+                pluginname VARCHAR PRIMARY KEY
+            );
+            """)
+            c.execute("""
             CREATE TABLE room_plugins (
-                pluginid   INTEGER PRIMARY KEY AUTOINCREMENT,
-                roomid     VARCHART,
-                pluginname VARCHAR
+                roomid     VARCHAR,
+                pluginname VARCHAR,
+                PRIMARY KEY (roomid, pluginname)
+            );
+            """)
+            c.execute("""
+            CREATE TABLE room_data (
+                roomid     VARCHAR,
+                key        VARCHAR,
+                value      TEXT,
+                PRIMARY KEY (roomid, key)
             );
             """)
             c.execute("""
             CREATE TABLE plugin_data (
-                pluginid   INTEGER,
+                pluginname VARCHAR,
                 key        VARCHAR,
                 value      TEXT,
-                PRIMARY KEY (pluginid, key)
+                PRIMARY KEY (pluginname, key)
+            );
+            """)
+            c.execute("""
+            CREATE TABLE room_plugin_data (
+                roomid     VARCHAR,
+                pluginname VARCHAR,
+                key        VARCHAR,
+                value      TEXT,
+                PRIMARY KEY (roomid, pluginname, key)
             );
             """)
 
@@ -144,15 +173,11 @@ credentials""")
                 self.active_rooms.add(mr)
 
 
-
-
     async def read_plugins(self):
         plugin_paths = [Path(path) for path in self.pluginpath]
         logging.info("Reading available plugins from: {}".format(plugin_paths))
 
         help_module = None
-
-        self.available_plugins = {}
 
         # plugins must be called ...plugin.py, so other modules in the same
         # directory are not falsely loaded (allows for plugin decomposition)
@@ -168,6 +193,25 @@ credentials""")
                     except Exception as e:
                         logging.warning(e)
 
+    async def enter_plugins_to_db(self):
+        # we now check, if all loaded plugins have an entry in the database
+        # if not, we add it
+        # TODO: - do we want to remove database entries when a plugin disappears?
+        #         problem: development of plugin with errors -> deletion?!?! not wanted!
+        #       - How do we guarantee the uniqueness of filenames among directories?
+        cursor = self.conn.cursor()
+        res = cursor.execute("""
+        SELECT *
+        FROM plugins;
+        """)
+        dbplugins = res.fetchall()
+        for ap in self.available_plugins.keys():
+            if (ap,) not in dbplugins:
+                # add plugin to db
+                self.conn.execute("""
+                INSERT INTO plugins (pluginname) VALUES (?);
+                """, (ap,))
+                self.conn.commit()
 
     async def listen(self):
 
