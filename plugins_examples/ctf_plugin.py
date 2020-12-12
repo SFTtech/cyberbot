@@ -1,4 +1,4 @@
-
+import json
 HELP_DESC = ("""!doing <TASKNAME>\t\t\t-\tTell people that you are doing a specific task
 !done <TASKNAME>\t\t\t-\tRemove yourself from task
 !finished <TASKNAME>\t\t-\tMark task as solved/finished and remove from task list
@@ -9,6 +9,15 @@ HELP_DESC = ("""!doing <TASKNAME>\t\t\t-\tTell people that you are doing a speci
 
 async def register_to(plugin):
     mapping = {}
+
+    async def save_mapping():
+        nonlocal mapping
+        await plugin.kvstore_set_value("mapping", json.dumps(mapping))
+
+    async def load_mapping():
+        nonlocal mapping
+        if "mapping" in (await plugin.kvstore_get_keys()):
+            mapping = json.loads(await plugin.kvstore_get_value("mapping"))
 
     def format_block(text):
         return f"<pre><code>{text}</pre></code>"
@@ -39,11 +48,13 @@ async def register_to(plugin):
             mapping[arg] = [event.source['sender']]
         elif event.source['sender'] not in mapping[arg]:
             mapping[arg].append(event.source['sender'])
+        await save_mapping()
         await print_mapping()
 
     async def cleardoing_callback(room, event):
         nonlocal mapping
         mapping = {}
+        await save_mapping()
         await print_mapping()
 
     async def done_callback(room, event):
@@ -52,11 +63,12 @@ async def register_to(plugin):
 
         if (arg in mapping):
             sender_id = event.source['sender']
-            if sender_id in mapping[args[0]]:
+            if sender_id in mapping[arg]:
                 mapping[arg].remove(sender_id)
                 if len(mapping[arg]) == 0:
                     mapping.pop(arg)
 
+        await save_mapping()
         await print_mapping()
 
     async def finished_callback(room, event):
@@ -66,7 +78,10 @@ async def register_to(plugin):
         if (arg in mapping):
             mapping.pop(arg)
 
+        await save_mapping()
         await print_mapping()
+
+    await load_mapping()
 
     doing_handler = plugin.CommandHandler("doing", doing_callback)
     plugin.add_handler(doing_handler)
