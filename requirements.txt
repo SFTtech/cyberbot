@@ -5,3 +5,5 @@ pathlib
 feedparser
 matrix-nio[e2e]
 aiohttp
+PyMVGLive
+requests
