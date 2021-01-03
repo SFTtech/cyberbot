@@ -33,8 +33,8 @@ class MatrixRoom():
         WHERE rooms.roomid=?;
         """, (self.room_id,))
 
-        for pname in r.fetchall():
-            self.plugins.append(Plugin(self, pid, pname))
+        for (pname,) in r.fetchall():
+            self.plugins.append(Plugin(self, pname))
 
         # load plugins
         results = await asyncio.gather(*(p.load() for p in self.plugins))

@@ -323,7 +323,7 @@ class Plugin:
         r = c.execute("""
         DELETE FROM room_data
         WHERE roomid=? AND key=?;
-        """, (self.roomid, key))
+        """, (self.mroom.roomid, key))
         self.bot.conn.commit()
 
     async def kvstore_rem_local_value(self, key):
@@ -331,9 +331,25 @@ class Plugin:
         r = c.execute("""
         DELETE FROM room_plugin_data
         WHERE roomid=? AND pluginname=? AND key=?
-        """, (self.roomid, self.pluginname, key))
+        """, (self.mroom.roomid, self.pluginname, key))
         self.bot.conn.commit()
+        
 
+    #=============================================
+    # Plugin helper functions (http_server)
+    #==============================================
+    async def http_register_path(self, path, handler):
+        """Registers a handler for a path. Returns the registered path
+        e.g. for localhost/hallo/ -> hallo. None if path already has been registered.
+        if the handler returns a aiohttp.web.Response, it will be forwarded to the http server
+        otherwise a 200 is returned
+        """
+        return await self.bot.http_server.register_path(path, handler)
+
+    async def http_deregister_path(self, path):
+        """Deregisters a handler for a path. Returns the deregistered path
+        e.g. for localhost/hallo/ -> hallo. None if path had not been registered."""
+        return await self.bot.http_server.deregister_path(path)
 
     #=============================================
     # Plugin helper functions (tasks)
@@ -359,7 +375,7 @@ class Plugin:
         return t
 
 
-    async def start_task(f):
+    async def start_task(self, f):
         t = asyncio.create_task(f)
         self.tasks.add(t)
         return t

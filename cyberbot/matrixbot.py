@@ -13,6 +13,7 @@ from pprint import pprint
 
 from matrixroom import MatrixRoom
 from plugin import Plugin
+from http_server import BotHTTPServer
 
 import nio
 
@@ -24,12 +25,14 @@ class MatrixBot:
     def __init__(self,
             username,
             password,
-            server,
+            homeserver,
             botname="Matrix Bot",
             deviceid="MATRIXBOT",
             dbpath="./matrixbot.sqlite",
             pluginpath=[ "./plugins" ],
             store_path=None,
+            bind_address="localhost",
+            bind_port=8080,
             environment={}):
 
         if not store_path:
@@ -50,10 +53,12 @@ class MatrixBot:
         for path in pluginpath:
             sys.path.append(path)
 
+        # create http server
+        self.http_server = BotHTTPServer(bind_address, bind_port)
 
         logging.info(f"Store path: {store_path}")
 
-        self.client = nio.AsyncClient(server, username, device_id=deviceid, store_path=str(store_path))
+        self.client = nio.AsyncClient(homeserver, username, device_id=deviceid, store_path=str(store_path))
 
         self.password = password
         self.botname = botname
@@ -67,6 +72,9 @@ class MatrixBot:
         self.active_rooms = set()
         self.available_plugins = {}
 
+
+    async def start_http_server(self):
+        await self.http_server.start()
 
 
     async def login(self):
@@ -218,7 +226,9 @@ credentials""")
         async def handle_invite_event(room, event):
             try:
                 jrooms = await self.client.joined_rooms()
+                print(jrooms)
                 jrooms = jrooms.rooms
+                print(jrooms)
             except:
                 logging.warning(f"Not joining room {room.room_id}")
                 return
@@ -294,6 +304,14 @@ credentials""")
             elif type(event) == nio.MegolmEvent:
                 logging.debug("account shared:", self.client.olm_account_shared)
                 logging.warning("Unable to decrypt event")
+                print(f"Event session ID {event.session_id}")
+                r = nio.crypto.OutgoingKeyRequest(event.session_id, None, None, None)
+                self.client.store.remove_outgoing_key_request(r)
+                if (event.session_id in self.client.olm.outgoing_key_requests.keys()):
+                    del self.client.olm.outgoing_key_requests[event.session_id]
+                res = await self.client.request_room_key(event) # should do updating by itself
+                print(res)
+                #event_cb(room, event)
             else:
                 logging.debug("Ignoring unknown type event")
 
