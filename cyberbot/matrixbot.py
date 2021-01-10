@@ -13,7 +13,6 @@ from pprint import pprint
 
 from matrixroom import MatrixRoom
 from plugin import Plugin
-from http_server import BotHTTPServer
 
 import nio
 
@@ -31,9 +30,9 @@ class MatrixBot:
             dbpath="./matrixbot.sqlite",
             pluginpath=[ "./plugins" ],
             store_path=None,
-            bind_address="localhost",
-            bind_port=8080,
-            environment={}):
+            environment={},
+            global_plugins=[],
+            global_pluginpath=[ "./global_plugins" ]):
 
         if not store_path:
             store_path = Path(os.getcwd()) / "store"
@@ -48,13 +47,6 @@ class MatrixBot:
                 logging.error("Failed to create store path. Check permissions.")
                 print(e)
                 sys.exit(-1)
-
-        # this is a small hack to add the plugins to the import search path
-        for path in pluginpath:
-            sys.path.append(path)
-
-        # create http server
-        self.http_server = BotHTTPServer(bind_address, bind_port)
 
         logging.info(f"Store path: {store_path}")
 
@@ -71,10 +63,29 @@ class MatrixBot:
 
         self.active_rooms = set()
         self.available_plugins = {}
+        # order of global_plugins is important as they may depend on each other
+        # also the non-global plugins may depend on them
+        # thus we map by index between names and plugins and do not use a dict()
+        self.global_pluginpath = global_pluginpath
+        self.global_plugin_names = global_plugins
+        self.global_plugins = [None] * len(global_plugins)
 
 
-    async def start_http_server(self):
-        await self.http_server.start()
+        # this is a small hack to add the plugins to the import search path                                                                                                                                          
+        for path in pluginpath:
+            sys.path.append(path)
+        sys.path.append(global_pluginpath)
+
+    def get_global_plugin_object(self, name):
+        i = self.global_plugin_names.index(name)
+        return self.global_plugins[i].Object
+
+
+    async def start_global_plugins(self):
+        for i in range(len(self.global_plugin_names)):
+            # it's the plugin's job to set up that this works
+            await self.global_plugins[i].Object.set_bot(self)
+            await self.global_plugins[i].Object.start()
 
 
     async def login(self):
@@ -180,26 +191,37 @@ credentials""")
                 await mr.load_plugins()
                 self.active_rooms.add(mr)
 
-
     async def read_plugins(self):
         plugin_paths = [Path(path) for path in self.pluginpath]
         logging.info("Reading available plugins from: {}".format(plugin_paths))
 
         help_module = None
 
+        for i in range(len(self.global_plugin_names)):
+            modname = self.global_plugin_names[i]
+            filename = Path(self.global_pluginpath) / f"{modname}.py"
+            if filename.exists():
+                modname = f'plugins.{modname}'
+                loader = importlib.machinery.SourceFileLoader(modname, str(filename))
+                try:
+                    module = loader.load_module(modname)
+                    self.global_plugins[i] = module
+                except Exception as e:
+                    logging.warning(e)
         # plugins must be called ...plugin.py, so other modules in the same
         # directory are not falsely loaded (allows for plugin decomposition)
         for plugin_path in plugin_paths:
-            for filename in plugin_path.glob("*_plugin.py"):
-                if filename.exists():
-                    modname = f'plugins.{filename.stem}'
-                    loader = importlib.machinery.SourceFileLoader(modname, str(filename))
+            for path in plugin_path.glob("*_plugin.py"):
+                if path.exists():
+                    modname = f'plugins.{path.stem}'
+                    loader = importlib.machinery.SourceFileLoader(modname, str(path))
                     try:
                         module = loader.load_module(modname)
-                        pluginname = filename.stem.replace("_plugin","")
+                        pluginname = path.stem.replace("_plugin","")
                         self.available_plugins[pluginname] = module.HELP_DESC
                     except Exception as e:
                         logging.warning(e)
+        await self.enter_plugins_to_db()
 
     async def enter_plugins_to_db(self):
         # we now check, if all loaded plugins have an entry in the database
@@ -213,7 +235,7 @@ credentials""")
         FROM plugins;
         """)
         dbplugins = res.fetchall()
-        for ap in self.available_plugins.keys():
+        for ap in list(self.available_plugins.keys()) + self.global_plugin_names:
             if (ap,) not in dbplugins:
                 # add plugin to db
                 self.conn.execute("""
@@ -358,3 +380,8 @@ credentials""")
 
         await self.client.sync_forever(30000)
 
+    async def start(self):
+        await self.read_plugins()
+        await self.start_global_plugins()
+        await self.load_rooms()
+        await self.listen()

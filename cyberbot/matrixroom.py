@@ -1,11 +1,9 @@
 import asyncio
 import nio
-import pathlib
 import logging
 import importlib
 
 from itertools import compress
-from pathlib import Path
 
 from plugin import Plugin
 

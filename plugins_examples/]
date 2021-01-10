@@ -5,7 +5,6 @@ TODO: invalidate urls when plugin is removed
 import random
 import re
 import string
-import json
 
 import nio
 
@@ -68,13 +67,6 @@ class InviteListener:
         self.nio_client = plugin.client
         self.plugin = plugin
 
-        invitations_json = await plugin.kvstore_get_plugin_value('invitations')
-        if invitations_json is None:
-            self.invitations = {}
-        else:
-            self.invitations = json.loads(invitations_json)
-
-
         async def handle_request(request):
             def gen_html(msg):
                 return f"""
@@ -98,10 +90,17 @@ class InviteListener:
 
             random_part = path.split("/")[-2]
 
-            if random_part not in self.invitations.keys():
+#            with sqlite3.connect(self.dbname) as conn:
+#                conn.execute('''CREATE TABLE IF NOT EXISTS invitations (random_part text, room_id text, invitor text)''')
+#                conn.commit()
+#                cur = conn.cursor()
+#                cur.execute('''SELECT room_id, invitor FROM invitations WHERE random_part = ?''', (random_part,))
+#                res = cur.fetchall()
+
+            if len(res) == 0:
                 return web.Response(text=gen_html("Invalid Link"), content_type='text/html')
 
-            room_id,inviter = self.invitations[random_part]
+            room_id = res[0][0]
             room = self.nio_client.rooms.get(room_id)
 
             if request.method == "GET":
@@ -109,7 +108,7 @@ class InviteListener:
                     room_name = "Unknown Room (Probably will fail to join)"
                 else:
                     room_name = room.display_name
-                content = gen_site_content(room_name,inviter)
+                content = gen_site_content(room_name,res[0][1])
                 return web.Response(text=content, content_type='text/html')
 
             elif request.method == "POST":
@@ -140,9 +139,14 @@ class InviteListener:
         self.is_running = True
 
 
-    async def register_invite(self, room, random_part, inviter):
-        self.invitations[random_part] = (room.room_id, inviter)
-        await self.plugin.kvstore_set_plugin_value('invitations', json.dumps(self.invitations))
+    async def register_invite(self, room, random_part, invitor):
+        with sqlite3.connect(self.dbname) as conn:
+            conn.execute('''CREATE TABLE IF NOT EXISTS invitations (random_part text, room_id text, invitor text)''')
+            conn.execute('''INSERT INTO invitations VALUES (?,?,?)''', (random_part, room.room_id, invitor))
+            conn.commit()
+
+
+
 
 
 if "il" not in globals():
@@ -168,11 +172,11 @@ async def register_to(plugin):
 
         random_part = gen_random_part()
         try:
-            inviter = (await room.client.get_displayname(event.sender)).displayname
+            invitor = (await room.client.get_displayname(event.sender)).displayname
         except:
-            inviter = "Unknown Inviter"
+            invitor = "Unknown Invitor"
 
-        await il.register_invite(room, random_part, inviter)
+        await il.register_invite(room, random_part, invitor)
 
         await plugin.send_html("Send this link to the people you want to invite to this room: <br/><pre><code>" + gen_url(random_part) + "</pre></code>")
 

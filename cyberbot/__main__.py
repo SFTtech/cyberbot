@@ -12,12 +12,11 @@ from matrixbot import MatrixBot
 import nio
 
 DEFAULT_BOTNAME = "Matrix Bot"
-DEFAULT_PLUGINPATH = "./plugins;./plugins_examples"
+DEFAULT_PLUGINPATH = "./plugins"
 DEFAULT_DEVICEID = "MATRIXBOT"
 DEFAULT_DBPATH = "./matrixbot.sqlite"
 DEFAULT_BIND_ADDRESS = "localhost"
 DEFAULT_BIND_PORT = "8080"
-
 
 # load_plugins
 # plugins setup event listeners via api
@@ -60,8 +59,6 @@ config file exists and all fields are available""")
     username     = vals['USERNAME']
     password     = vals['PASSWORD']
     server       = vals['SERVER']
-    bind_address = vals.get("BIND_ADDRESS", DEFAULT_BIND_ADDRESS)
-    bind_port    = int(vals.get("BIND_PORT", DEFAULT_BIND_PORT))
     botname      = vals.get("BOTNAME", DEFAULT_BOTNAME)
     pluginpath   = [p.strip() for p in vals.get("PLUGINPATH", DEFAULT_PLUGINPATH).split(";")]
     deviceid     = vals.get("DEVICEID", DEFAULT_DEVICEID)
@@ -70,6 +67,8 @@ config file exists and all fields are available""")
 
     environment = dict((k.upper(),v) for k,v in dict(vals).items()
                                      if k.lower() != 'password')
+    global_pluginpath = vals.get("GLOBAL_PLUGINPATH", "")
+    global_plugins = [p.strip() for p in vals.get("GLOBAL_PLUGINS", "").split(";")]
 
 
     async with MatrixBot(
@@ -79,15 +78,11 @@ config file exists and all fields are available""")
             store_path=store_path,
             environment=environment,
             pluginpath=pluginpath,
+            global_pluginpath=global_pluginpath,
             dbpath=dbpath,
-            bind_address=bind_address,
-            bind_port=bind_port,
+            global_plugins=global_plugins,
             ) as bot:
-        await bot.start_http_server()
-        await bot.load_rooms()
-        await bot.read_plugins()
-        await bot.enter_plugins_to_db()
-        await bot.listen()
+        await bot.start()
 
 
 if __name__ == "__main__":

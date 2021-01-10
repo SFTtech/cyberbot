@@ -228,7 +228,7 @@ class Plugin:
         SELECT key
         FROM room_data
         WHERE roomid = ?;
-        """, (self.mroom.roomid,))
+        """, (self.mroom.room_id,))
         k = [k[0] for k in r.fetchall()]
         return k
 
@@ -238,7 +238,7 @@ class Plugin:
         SELECT key
         FROM room_plugin_data
         WHERE roomid = ? AND pluginname=?;
-        """, (self.mroom.roomid, self.pluginname))
+        """, (self.mroom.room_id, self.pluginname))
         k = [k[0] for k in r.fetchall()]
         return k
 
@@ -301,7 +301,7 @@ class Plugin:
         c = self.bot.conn.cursor()
         r = c.execute("""
         INSERT OR REPLACE INTO room_plugin_data(roomid,pluginname,key,value)
-        VALUES (?,?,?);
+        VALUES (?,?,?,?);
         """, (self.mroom.room_id, self.pluginname, key, value))
         self.bot.conn.commit()
     
@@ -323,7 +323,7 @@ class Plugin:
         r = c.execute("""
         DELETE FROM room_data
         WHERE roomid=? AND key=?;
-        """, (self.mroom.roomid, key))
+        """, (self.mroom.room_id, key))
         self.bot.conn.commit()
 
     async def kvstore_rem_local_value(self, key):
@@ -331,7 +331,7 @@ class Plugin:
         r = c.execute("""
         DELETE FROM room_plugin_data
         WHERE roomid=? AND pluginname=? AND key=?
-        """, (self.mroom.roomid, self.pluginname, key))
+        """, (self.mroom.room_id, self.pluginname, key))
         self.bot.conn.commit()
         
 
@@ -344,12 +344,12 @@ class Plugin:
         if the handler returns a aiohttp.web.Response, it will be forwarded to the http server
         otherwise a 200 is returned
         """
-        return await self.bot.http_server.register_path(path, handler)
+        return await self.bot.get_global_plugin_object("http_server").register_path(path, handler)
 
     async def http_deregister_path(self, path):
         """Deregisters a handler for a path. Returns the deregistered path
         e.g. for localhost/hallo/ -> hallo. None if path had not been registered."""
-        return await self.bot.http_server.deregister_path(path)
+        return await self.bot.get_global_plugin_object("http_server").deregister_path(path)
 
     #=============================================
     # Plugin helper functions (tasks)
