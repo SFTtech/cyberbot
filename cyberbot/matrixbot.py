@@ -175,7 +175,6 @@ credentials""")
 
     async def load_rooms(self):
         joined_rooms = self.client.rooms
-        print(joined_rooms)
         cursor = self.conn.cursor()
         res = cursor.execute("""
         SELECT *
@@ -248,9 +247,7 @@ credentials""")
         async def handle_invite_event(room, event):
             try:
                 jrooms = await self.client.joined_rooms()
-                print(jrooms)
                 jrooms = jrooms.rooms
-                print(jrooms)
             except:
                 logging.warning(f"Not joining room {room.room_id}")
                 return
@@ -261,11 +258,7 @@ credentials""")
                 await asyncio.sleep(0.5)
                 if type(response) == nio.responses.JoinResponse:
                     self.active_rooms.add(await MatrixRoom.new(self,room))
-                    pprint(vars(response))
                 else:
-                    print(type(response))
-                    print(vars(response))
-                    print(response.message)
                     logging.warning(f"Couldn't joing the room: {response}")
             else:
                 logging.warning(f"Not joining room {room.room_id}")
@@ -332,7 +325,6 @@ credentials""")
                 if (event.session_id in self.client.olm.outgoing_key_requests.keys()):
                     del self.client.olm.outgoing_key_requests[event.session_id]
                 res = await self.client.request_room_key(event) # should do updating by itself
-                print(res)
                 #event_cb(room, event)
             else:
                 logging.debug("Ignoring unknown type event")

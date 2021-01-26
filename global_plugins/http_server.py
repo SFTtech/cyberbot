@@ -51,6 +51,7 @@ class BotHTTPServer:
             res = await (self.registered_paths[part](request))
             if res is None:
                 return web.Response(status=200)
+            return res
 
 def read_config_and_initialize():
     logging.info("Creating BotHTTPServer")

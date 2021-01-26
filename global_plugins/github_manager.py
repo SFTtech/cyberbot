@@ -5,6 +5,7 @@ import string
 import random
 import configparser
 import sys
+import hmac
 
 
 from pprint import pprint
@@ -14,9 +15,9 @@ from aiohttp import web
 
 from matrixroom import MatrixRoom
 
-CONFIGPATH = "global_plugins/config/gitlab_manager.ini"
+CONFIGPATH = "global_plugins/config/github_manager.ini"
 
-class GitLabManager:
+class GitHubManager:
     def __init__(self, url, path):
         self.url = url
         self.path = path
@@ -31,9 +32,8 @@ class GitLabManager:
 
     async def start(self):
         async def handle_request(request):
-            print(request, "gitlab")
             if request.method == "GET":
-                logging.info(f"Gitlab: Got GET request to webhook. Sending ooops page.")
+                logging.info(f"Github: Got GET request to webhook. Sending ooops page.")
                 text = """
 <html>
     <head>
@@ -41,43 +41,50 @@ class GitLabManager:
     </head>
 
     <body>
-        <p>Please don't open the url in your browser, but rather paste the url and the token into your page's gitlab webhook settings under Settings/Webhooks.</p>
+        <p>Please don't open the url in your browser, but rather paste the url and the token into your page's github webhook settings under Settings/Webhooks.</p>
     </body>
 </html>
 """
                 return web.Response(text=text, content_type='text/html')
 
             if request.path != self.path:
-                logging.info(f"Gitlab: ignoring request to wrong path: {request.path}")
+                logging.info(f"Github: ignoring request to wrong path: {request.path}")
                 return
 
             if request.method != "POST":
                 return web.Response(status=404)
 
-            token = request.headers.get("X-Gitlab-Token")
-            event = request.headers.get("X-Gitlab-Event")
-            if token is None or event is None:
+            
+            c = await request.content.read()
+            with open("hookslog.txt", "ab+") as f:
+                f.write(c)
+            
+            if ("X-Hub-Signature-256" not in request.headers):
                 return web.Response(status=400)
+            sig = request.headers.get("X-Hub-Signature-256").split("=")[1]
+            if ("X-GitHub-Event" not in request.headers):
+                return web.Response(status=400)
+            event = request.headers.get("X-GitHub-Event")
 
-            if token in self.tokens:
-                handlers = [handler for (hid, handler) in self.tokens[token]]
-                c = await request.content.read()
-                with open("hookslog.txt", "ab+") as f:
-                    f.write(c)
-                try:
-                    jsondata = c.decode("utf-8")
-                    content = json.loads(jsondata)
-                except UnicodeDecodeError:
-                    return web.Response(status=400)
-                except:
-                    return web.Response(status=400)
+            # how to check if not really is from github and simultaniously find out which token was used:
+            # https://docs.github.com/en/developers/webhooks-and-events/securing-your-webhooks
+            # we just check all tokens and if one has a matching hash, this is the one
+            # linearly in number of tokens and slow as we compute a hash until we find the token
+            # also probably vulnerable to timing attacks. But at the moment I don't have a better idea
 
-                await asyncio.gather(
-                    *(handler.handle(token, event, content) for handler in handlers))
-                return web.Response(text="OK")
+            for token in self.tokens:
+                h = hmac.new(bytes(token, encoding="utf8"), c, "sha256")
+                if (hmac.compare_digest(h.hexdigest(), sig)):
+                    handlers = [handler for (hid, handler) in self.tokens[token]]
+                    try:
+                        content = json.loads(c.decode("utf-8"))
+                    except:
+                        return web.Response(status=400)
+                    await asyncio.gather(
+                        *(handler.handle(token, event, content) for handler in handlers))
+                    return web.Response(text="OK")
             return web.Response(status=400)
 
-        
         res = await self.http_server.register_path(self.path, handle_request) 
 
     async def nexthookid(self):
@@ -95,7 +102,7 @@ class GitLabManager:
         return hookid
 
     async def deregister_hook(self, token, hookid):
-        # TODO: Race Conditions? -> no, because only one thread and no await
+        # Race Conditions? -> no, because only one thread and no await
         h = self.tokens[token]
         for i in range(len(h)):
             if h[i][0] == hookid:
@@ -105,19 +112,19 @@ class GitLabManager:
                 break
 
 def read_config_and_initialize():
-    logging.info("Creating GitLabManager")
-    logging.info("Reading gitlab_manager config")
+    logging.info("Creating GitHubManager")
+    logging.info("Reading github_manager config")
 
     config = configparser.ConfigParser()
     config.read(CONFIGPATH)
     if "exposed" not in config or \
             "url" not in config["exposed"] or "path" not in config["exposed"]:
         logging.error(
-            "Gitlab: invalid config file")
+            "Github: invalid config file")
         sys.exit(-1)
 
     p = config["exposed"]["path"]
     p = "/" + p if not p.startswith("/") else p
-    return GitLabManager(url=config["exposed"]["url"], path=p)
+    return GitHubManager(url=config["exposed"]["url"], path=p)
 
 Object = read_config_and_initialize()
