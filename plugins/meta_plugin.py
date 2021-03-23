@@ -4,7 +4,6 @@ HELP_DESC = ("""
 !listplugins\t\t\t-\tlist addable plugins
 !addplugin plugin [plugin2 ...]\t-\tadd plugin(s) (--all for all)
 !remplugin plugin [plugin2 ...]\t-\tremove plugin(s)
-!reload\t\t\t\t-\tReload plugins
 """)
 
 
@@ -54,13 +53,13 @@ async def register_to(plugin):
     plugin.add_handler(remplugin_handler)
 
 
-    async def reload_callback(room, event):
-        # if some plugins are still in the register_to funciton, they will not
-        # be stopped :(
-        await plugin.mroom.bot.read_plugins() # look for new available plugins
-        await asyncio.gather(*(p.stop_all_tasks() for p in plugin.mroom.plugins)) # stop running tasks
-        await plugin.mroom.load_plugins()
-        # await plugin.send_text("Reloaded Plugins.")
-
-    reload_handler = plugin.CommandHandler("reload", reload_callback)
-    plugin.add_handler(reload_handler)
+#    async def reload_callback(room, event):
+#        # if some plugins are still in the register_to funciton, they will not
+#        # be stopped :(
+#        await plugin.mroom.bot.read_plugins() # look for new available plugins
+#        await asyncio.gather(*(p.stop_all_tasks() for p in plugin.mroom.plugins)) # stop running tasks
+#        await plugin.mroom.load_plugins()
+#        # await plugin.send_text("Reloaded Plugins.")
+#
+#    reload_handler = plugin.CommandHandler("reload", reload_callback)
+#    plugin.add_handler(reload_handler)

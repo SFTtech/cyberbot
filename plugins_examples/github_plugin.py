@@ -13,7 +13,7 @@ from matrixroom import MatrixRoom
 import github.formatting as fmt
 
 
-HELP_DESC = ("!github\t\t\t-\tGithub Webhook Manager/Notifier 🦊\n")
+HELP_DESC = ("!github\t\t\t-\tGithub Webhook Manager/Notifier 🐱\n")
 
 DEFAULTCONFIG = {
     "emoji": True,
@@ -107,7 +107,7 @@ Available subcommands:
     listhooks               - show subscribed webhooks
     config                  - change the way that notifications are printed
 
-How does it work? 🦊
+How does it work? 🐱
     You first create a new secret token for a hook using the 'newhook' command.
     Then open your github repo (or group) page and navigate to 'Settings>Webhooks'.
     There, you enter the url and secret token returned by the 'newtoken'

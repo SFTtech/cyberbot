@@ -40,7 +40,7 @@ class Formatter:
         """
         if self.emojis:
             #animals = "🐶🐺🦊🦝🐱🐱🦁🐯"
-            animals = "🐺"
+            animals = "🐱"
             animal = random.choice(animals)
             return f"{animal} {self.format_content()}"
         else:
