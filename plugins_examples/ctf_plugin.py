@@ -28,14 +28,28 @@ async def register_to(plugin):
         return " ".join(args)
 
     async def get_displayname(user_id):
-        return (await plugin.client.get_displayname(user_id)).displayname
+        try:
+            # try and except as we can also get an error as answer which does not have the displayname attribute
+            response = await plugin.client.get_displayname(user_id)
+            return response.displayname
+        except:
+            return None
+
+    async def get_name_link(user_id):
+        dn = await get_displayname(user_id)
+        if (dn == None):
+            return "Name error"
+        # link does not show up anymore
+        return dn
+        # return f"<a href='https://matrix.to/#/{user_id}'>{dn}</a>"
+         
 
     async def print_mapping():
         nonlocal mapping
         s = "CURRENT TASKS\n===========================\n"
         for (task, idlist) in mapping.items():
             s += f"{task:30}:\t["
-            s += ", ".join([("<a href='https://matrix.to/#/{}'>{}</a>".format(user_id, await get_displayname(user_id))) for user_id in idlist])
+            s += ", ".join([await get_name_link(user_id) for user_id in idlist])
             s += "]\n"
 
         await plugin.send_html(format_block(s))

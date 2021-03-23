@@ -10,10 +10,10 @@ from collections import defaultdict
 
 from matrixroom import MatrixRoom
 
-import gitlab.formatting as fmt
+import github.formatting as fmt
 
 
-HELP_DESC = ("!gitlab\t\t\t-\tGitlab Webhook Manager/Notifier 🦊\n")
+HELP_DESC = ("!github\t\t\t-\tGithub Webhook Manager/Notifier 🐱\n")
 
 DEFAULTCONFIG = {
     "emoji": True,
@@ -23,17 +23,17 @@ DEFAULTCONFIG = {
 class LocalHookManager:
     """
     A HookManager loads and stores secrettokens and registers them to the
-    global GitLabManager
+    global GitHubManager
     """
 
     def __init__(self, plugin):
         self.plugin = plugin
         self.tokens = defaultdict(list)
-        self.glm = self.plugin.bot.get_global_plugin_object("gitlab_manager") #pluginname like in the config file of global_plugins
+        self.ghm = self.plugin.bot.get_global_plugin_object("github_manager") #pluginname like in the config file of global_plugins
 
     async def load_tokens(self):
-        if "gitlabtokens" in await self.plugin.kvstore_get_local_keys():
-            jsondata = await self.plugin.kvstore_get_local_value("gitlabtokens")
+        if "githubtokens" in await self.plugin.kvstore_get_local_keys():
+            jsondata = await self.plugin.kvstore_get_local_value("githubtokens")
             try:
                 tokenlist = json.loads(jsondata)
             except:
@@ -50,10 +50,10 @@ class LocalHookManager:
     async def store_tokens(self):
         if self.tokens is not None:
             jsondata = json.dumps(list(self.tokens.values()))
-            await self.plugin.kvstore_set_local_value("gitlabtokens", jsondata)
+            await self.plugin.kvstore_set_local_value("githubtokens", jsondata)
 
     async def add_token(self, token, store=True):
-        tokenid = await self.glm.register_hook(token, self)
+        tokenid = await self.ghm.register_hook(token, self)
         self.tokens[tokenid] = token
         if store:
             await self.store_tokens()
@@ -62,7 +62,7 @@ class LocalHookManager:
         pprint(self.tokens)
         if tokenid in self.tokens:
             token = self.tokens[tokenid]
-            await self.glm.deregister_hook(token, tokenid)
+            await self.ghm.deregister_hook(token, tokenid)
             self.tokens.pop(tokenid)
             await self.store_tokens()
             return True
@@ -71,7 +71,7 @@ class LocalHookManager:
 
     async def handle(self, token, event, content):
         """
-        called by GitLabManager when a hook event occurs
+        called by GitHubManager when a hook event occurs
         """
         logging.info(f"Token event received: {event}")
         if "config" in await self.plugin.kvstore_get_local_keys():
@@ -95,26 +95,26 @@ class LocalHookManager:
 
 
 async def destructor(plugin):
-    self.glm.tokens = defaultdict(list)
-    self.glm.currenthid = 0
+    self.ghm.tokens = defaultdict(list)
+    self.ghm.currenthid = 0
 
 
 async def register_to(plugin):
-    subcommands = """gitlab [subcommand] [option1 option2 ...]
+    subcommands = """github [subcommand] [option1 option2 ...]
 Available subcommands:
     newhook                 - generate secrettoken for a new webhooks
     remhook hooknbr         - remove a webhook subscription
     listhooks               - show subscribed webhooks
     config                  - change the way that notifications are printed
 
-How does it work? 🦊
+How does it work? 🐱
     You first create a new secret token for a hook using the 'newhook' command.
-    Then open your gitlab repo (or group) page and navigate to 'Settings>Webhooks'.
+    Then open your github repo (or group) page and navigate to 'Settings>Webhooks'.
     There, you enter the url and secret token returned by the 'newtoken'
     command and enter all event types you want to get notifications for and
     press 'Add webhook'.
 
-See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html">here</a> for more information on gitlab webhooks.
+See <a href="https://docs.github.com/en/developers/webhooks-and-events/about-webhooks">here</a> for more information on github webhooks.
 """
 
     lhm = LocalHookManager(plugin)
@@ -132,8 +132,8 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
         chars = string.ascii_letters + string.digits
         n = 16
         token = "".join(random.choice(chars) for i in range(n))
-        glm = lhm.glm
-        url = glm.url + glm.path
+        ghm = lhm.ghm
+        url = ghm.url + ghm.path
         await lhm.add_token(token)
         text = f"Successfully created token."
         await plugin.send_text(text)
@@ -162,15 +162,15 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
         config = json.loads(await plugin.kvstore_get_local_value("config"))
         if len(args) == 0:
             await plugin.send_html(format_help("\n".join(f"{k}:\t{v}" for k,v
-                in config.items()) + "\nPlease use !gitlab config set KEY VAL for changing a value"))
+                in config.items()) + "\nPlease use !github config set KEY VAL for changing a value"))
         elif len(args) == 3 and args[0] == "set" and args[1] in config and args[2].lower() in ["true", "false"]:
             config[args[1]] = (args[2].lower() == "true")
             await plugin.kvstore_set_local_value("config", json.dumps(config))
             await plugin.send_text(f"Successfully changed {args[1]} to {args[2]}")
         else:
-            await plugin.send_text("Please use !gitlab config set <key> <val> for changing a value")
+            await plugin.send_text("Please use !github config set <key> <val> for changing a value")
 
-    async def gitlab_callback(room, event):
+    async def github_callback(room, event):
         #        fmttest='''Thomas(thomas@example.com) pushed to branch master of project cyber-slurm https://gitlab.rbg.tum.de/cyber/cyber-slurm/-/tree/master
         #- Fix bug 1 (test.com)
         #- Fix readme (test.com)
@@ -195,5 +195,5 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
         else:
             await show_help()
 
-    gitlab_handler = plugin.CommandHandler("gitlab", gitlab_callback)
-    plugin.add_handler(gitlab_handler)
+    github_handler = plugin.CommandHandler("github", github_callback)
+    plugin.add_handler(github_handler)

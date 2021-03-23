@@ -11,10 +11,9 @@ from itertools import compress
 from pathlib import Path
 
 class Plugin:
-    def __init__(self, mroom, pluginid, pluginname):
+    def __init__(self, mroom, pluginname):
         self.mroom = mroom
 
-        self.pluginid = pluginid
         self.pluginname = pluginname
 
         self.handlers = []
@@ -28,7 +27,7 @@ class Plugin:
     async def load(self):
         filename = self.pluginname + "_plugin.py"
         full_plugin_path = None
-        for path in self.mroom.bot.pluginpath:
+        for path in self.bot.pluginpath:
             p = Path(path).resolve()
             if (p / filename ).exists():
                 full_plugin_path = p / filename
@@ -39,13 +38,13 @@ class Plugin:
             """)
             return False
 
-        logging.info(f"Room {self.mroom.nio_room.room_id}: trying to load {full_plugin_path}")
+        logging.info(f"Room {self.nio_room.room_id}: trying to load {full_plugin_path}")
         modname = f'plugins.{self.pluginname}'
         loader = importlib.machinery.SourceFileLoader(modname,
                 str(full_plugin_path))
         try:
             self.module = loader.load_module(modname)
-            self.module.ENVIRONMENT = self.mroom.bot.environment.copy()
+            self.module.ENVIRONMENT = self.bot.environment.copy()
             await self.module.register_to(self)
             return True
         except Exception as e:
@@ -212,42 +211,145 @@ class Plugin:
     # Plugin helper functions (key-value-store)
     #==============================================
     # only use strings. Use json for conversion
-    async def kvstore_get_keys(self):
+
+    async def kvstore_get_plugin_keys(self):
         c = self.bot.conn.cursor()
         r = c.execute("""
         SELECT key
         FROM plugin_data
-        WHERE pluginid=?;
-        """, (self.pluginid,))
+        WHERE pluginname=?;
+        """, (self.pluginname,))
         k = [k[0] for k in r.fetchall()]
         return k
 
-    async def kvstore_get_value(self, key):
+    async def kvstore_get_room_keys(self):
+        c = self.bot.conn.cursor()
+        r = c.execute("""
+        SELECT key
+        FROM room_data
+        WHERE roomid = ?;
+        """, (self.mroom.room_id,))
+        k = [k[0] for k in r.fetchall()]
+        return k
+
+    async def kvstore_get_local_keys(self):
+        c = self.bot.conn.cursor()
+        r = c.execute("""
+        SELECT key
+        FROM room_plugin_data
+        WHERE roomid = ? AND pluginname=?;
+        """, (self.mroom.room_id, self.pluginname))
+        k = [k[0] for k in r.fetchall()]
+        return k
+
+
+
+
+
+
+    async def kvstore_get_plugin_value(self, key):
         c = self.bot.conn.cursor()
         r = c.execute("""
         SELECT value
         FROM plugin_data
-        WHERE pluginid=? and key=?;
-        """, (self.pluginid,key))
+        WHERE pluginname=? AND key=?;
+        """, (self.pluginname, key))
         k = r.fetchall()
         return k[0][0] if k else None
 
-    async def kvstore_set_value(self, key, value):
+    async def kvstore_get_room_value(self, key):
         c = self.bot.conn.cursor()
         r = c.execute("""
-        INSERT OR REPLACE INTO plugin_data(pluginid,key,value)
-        VALUES (?,?,?)
-        """, (self.pluginid,key,value))
+        SELECT value
+        FROM room_data
+        WHERE roomid=? AND key=?;
+        """, (self.mroom.room_id, key))
+        k = r.fetchall()
+        return k[0][0] if k else None
+
+    async def kvstore_get_local_value(self, key):
+        c = self.bot.conn.cursor()
+        r = c.execute("""
+        SELECT value
+        FROM room_plugin_data
+        WHERE roomid=? AND pluginname=? AND key=?;
+        """, (self.mroom.room_id, self.pluginname, key))
+        k = r.fetchall()
+        return k[0][0] if k else None
+
+
+
+
+
+    async def kvstore_set_plugin_value(self, key, value):
+        c = self.bot.conn.cursor()
+        r = c.execute("""
+        INSERT OR REPLACE INTO plugin_data(pluginname,key,value)
+        VALUES (?,?,?);
+        """, (self.pluginname,key,value))
         self.bot.conn.commit()
     
-    async def kvstore_rem_value(self, key):
+    async def kvstore_set_room_value(self, key, value):
+        c = self.bot.conn.cursor()
+        r = c.execute("""
+        INSERT OR REPLACE INTO room_data(roomid,key,value)
+        VALUES (?,?,?);
+        """, (self.mroom.room_id,key,value))
+        self.bot.conn.commit()
+    
+    async def kvstore_set_local_value(self, key, value):
+        c = self.bot.conn.cursor()
+        r = c.execute("""
+        INSERT OR REPLACE INTO room_plugin_data(roomid,pluginname,key,value)
+        VALUES (?,?,?,?);
+        """, (self.mroom.room_id, self.pluginname, key, value))
+        self.bot.conn.commit()
+    
+
+
+
+
+
+    async def kvstore_rem_plugin_value(self, key):
         c = self.bot.conn.cursor()
         r = c.execute("""
         DELETE FROM plugin_data
-        WHERE pluginid=? and key=?
-        """, (self.pluginid,key))
+        WHERE pluginname=? AND key=?;
+        """, (self.pluginname, key))
         self.bot.conn.commit()
 
+    async def kvstore_rem_room_value(self, key):
+        c = self.bot.conn.cursor()
+        r = c.execute("""
+        DELETE FROM room_data
+        WHERE roomid=? AND key=?;
+        """, (self.mroom.room_id, key))
+        self.bot.conn.commit()
+
+    async def kvstore_rem_local_value(self, key):
+        c = self.bot.conn.cursor()
+        r = c.execute("""
+        DELETE FROM room_plugin_data
+        WHERE roomid=? AND pluginname=? AND key=?
+        """, (self.mroom.room_id, self.pluginname, key))
+        self.bot.conn.commit()
+        
+
+    #=============================================
+    # Plugin helper functions (http_server)
+    #==============================================
+    async def http_register_path(self, path, handler):
+        """Registers a handler for a path. Returns the registered path
+        e.g. for localhost/hallo/ -> hallo. None if path already has been registered.
+        if the handler returns a aiohttp.web.Response, it will be forwarded to the http server
+        otherwise a 200 is returned
+        """
+        return await self.bot.get_global_plugin_object("http_server").register_path(path, handler)
+
+    async def http_deregister_path(self, path):
+        """Deregisters a handler for a path. Returns the deregistered path
+        e.g. for localhost/hallo/ -> hallo. None if path had not been registered."""
+        return await self.bot.get_global_plugin_object("http_server").deregister_path(path)
 
     #=============================================
     # Plugin helper functions (tasks)
@@ -273,7 +375,7 @@ class Plugin:
         return t
 
 
-    async def start_task(f):
+    async def start_task(self, f):
         t = asyncio.create_task(f)
         self.tasks.add(t)
         return t

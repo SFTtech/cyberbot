@@ -12,10 +12,11 @@ from matrixbot import MatrixBot
 import nio
 
 DEFAULT_BOTNAME = "Matrix Bot"
-DEFAULT_PLUGINPATH = "./plugins;./plugins_examples"
+DEFAULT_PLUGINPATH = "./plugins"
 DEFAULT_DEVICEID = "MATRIXBOT"
 DEFAULT_DBPATH = "./matrixbot.sqlite"
-
+DEFAULT_BIND_ADDRESS = "localhost"
+DEFAULT_BIND_PORT = "8080"
 
 # load_plugins
 # plugins setup event listeners via api
@@ -29,7 +30,7 @@ def setup_logging(verbose=False):
 def setup_cli():
     # Interpret command line arguments
     cli = argparse.ArgumentParser()
-    cli.add_argument("-c", "--config", default="/etc/prism/config.py",
+    cli.add_argument("-c", "--config",
                      help="path to the configuration file")
     cli.add_argument("-v", action="store_true", help="Enable verbose output")
     return cli
@@ -55,17 +56,19 @@ config file exists and all fields are available""")
 
     vals = config['BotMatrixId']
 
-    username   = vals['USERNAME']
-    password   = vals['PASSWORD']
-    server     = vals['SERVER']
-    botname    = vals.get("BOTNAME", DEFAULT_BOTNAME)
-    pluginpath = [p.strip() for p in vals.get("PLUGINPATH", DEFAULT_PLUGINPATH).split(";")]
-    deviceid   = vals.get("DEVICEID", DEFAULT_DEVICEID)
-    store_path = vals.get("STOREPATH", "")
-    dbpath     = vals.get("DBPATH", DEFAULT_DBPATH)
+    username     = vals['USERNAME']
+    password     = vals['PASSWORD']
+    server       = vals['SERVER']
+    botname      = vals.get("BOTNAME", DEFAULT_BOTNAME)
+    pluginpath   = [p.strip() for p in vals.get("PLUGINPATH", DEFAULT_PLUGINPATH).split(";")]
+    deviceid     = vals.get("DEVICEID", DEFAULT_DEVICEID)
+    store_path   = vals.get("STOREPATH", "")
+    dbpath       = vals.get("DBPATH", DEFAULT_DBPATH)
 
     environment = dict((k.upper(),v) for k,v in dict(vals).items()
                                      if k.lower() != 'password')
+    global_pluginpath = vals.get("GLOBAL_PLUGINPATH", "")
+    global_plugins = [p.strip() for p in vals.get("GLOBAL_PLUGINS", "").split(";")]
 
 
     async with MatrixBot(
@@ -75,11 +78,11 @@ config file exists and all fields are available""")
             store_path=store_path,
             environment=environment,
             pluginpath=pluginpath,
-            dbpath=dbpath
+            global_pluginpath=global_pluginpath,
+            dbpath=dbpath,
+            global_plugins=global_plugins,
             ) as bot:
-        await bot.load_rooms()
-        await bot.read_plugins()
-        await bot.listen()
+        await bot.start()
 
 
 if __name__ == "__main__":
