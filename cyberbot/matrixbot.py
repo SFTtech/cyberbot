@@ -71,7 +71,7 @@ class MatrixBot:
         self.global_plugins = [None] * len(global_plugins)
 
 
-        # this is a small hack to add the plugins to the import search path                                                                                                                                          
+        # this is a small hack to add the plugins to the import search path
         for path in pluginpath:
             sys.path.append(path)
         sys.path.append(global_pluginpath)

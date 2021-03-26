@@ -78,7 +78,10 @@ class GitHubManager:
                     handlers = [handler for (hid, handler) in self.tokens[token]]
                     try:
                         content = json.loads(c.decode("utf-8"))
-                    except:
+                    except Exception as e:
+                        print(e)
+                        print(f"c: {c}")
+                        print(f"content: {content}")
                         return web.Response(status=400)
                     await asyncio.gather(
                         *(handler.handle(token, event, content) for handler in handlers))

@@ -51,7 +51,7 @@ async def main():
         or not all(key in config['BotMatrixId']
                 for key in ['USERNAME','PASSWORD','SERVER']):
         sys.stderr.write("""Bad config file. Please check that
-config file exists and all fields are available""")
+config file exists and all fields are available\n""")
         sys.exit(-1)
 
     vals = config['BotMatrixId']
