@@ -12,12 +12,12 @@ async def register_to(plugin):
 
     async def save_mapping():
         nonlocal mapping
-        await plugin.kvstore_set_value("mapping", json.dumps(mapping))
+        await plugin.kvstore_set_local_value("mapping", json.dumps(mapping))
 
     async def load_mapping():
         nonlocal mapping
-        if "mapping" in (await plugin.kvstore_get_keys()):
-            mapping = json.loads(await plugin.kvstore_get_value("mapping"))
+        if "mapping" in (await plugin.kvstore_get_local_keys()):
+            mapping = json.loads(await plugin.kvstore_get_local_value("mapping"))
 
     def format_block(text):
         return f"<pre><code>{text}</pre></code>"
