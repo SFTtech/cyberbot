@@ -6,8 +6,6 @@ import random
 import configparser
 import sys
 
-
-from pprint import pprint
 from collections import defaultdict
 
 from aiohttp import web
@@ -31,7 +29,6 @@ class GitLabManager:
 
     async def start(self):
         async def handle_request(request):
-            print(request, "gitlab")
             if request.method == "GET":
                 logging.info(f"Gitlab: Got GET request to webhook. Sending ooops page.")
                 text = """
@@ -100,8 +97,6 @@ class GitLabManager:
         for i in range(len(h)):
             if h[i][0] == hookid:
                 del h[i]
-                pprint("After del")
-                pprint(h)
                 break
 
 def read_config_and_initialize():

@@ -76,7 +76,6 @@ class Formatter:
             return f"branch {branchname}"
 
 
-
     def format_text_block(self, text, cut=True):
         if cut and text.count("\n") > 3:
             res = "\n".join(text.split("\n")[:3])
@@ -85,7 +84,20 @@ class Formatter:
             res = text
         return f"<pre><code>{res}</code></pre>"
 
+    def format_issue(self, issue, href=True):
+        url = issue.get("html_url", "")
+        issue_number = issue.get("number", "")
+        if issue_number:
+            issue_number = "#" + str(issue_number)
+        title = issue.get("title", "Unknown Title")
+        res = f"{issue_number} {title}"
+        if url and href:
+            return self.format_link(url, res)
+        else:
+            return res
 
+    def conv_newlines(self, text):
+        return text.replace("\n", "<br/>")
 
     # =============
     # PARSING
@@ -129,7 +141,7 @@ class CreateFormatter(Formatter):
         sender = self.get_sender()
         fmt_sender = self.format_sender(sender)
 
-        ref =self.content.get("ref", "")
+        ref = self.content.get("ref", "")
         ref_type = self.content.get("ref_type", "something")
 
         fmt_tn = f"{ref_type} {ref}" if ref_type != "branch" else self.format_branch(ref)
@@ -173,21 +185,34 @@ class ForkFormatter(Formatter):
         fmt = f"{fmt_sender} forked {fmt_repo}: {fmt_forkee}"
         return fmt
 
+class IssueCommentFormatter(Formatter):
+
+    def format_content(self):
+        repo = self.get_repo()
+        fmt_repo = self.format_repo(repo)
+        sender = self.get_sender()
+        fmt_sender = self.format_sender(sender)
+
+        action = self.content.get("action", "did something unknown to")
+
+        issue = self.content["issue"]
+        fmt_issue = self.format_issue(issue)
+        comment = self.content["comment"]
+        body = comment["body"]
+        fmt_body = self.format_text_block(body)
+        ret = ""
+        if action == "created":
+            ret = f"{fmt_sender} {action} new comment on issue {fmt_issue} of {fmt_repo}:\n{fmt_body}\n"
+        elif action == "edited":
+            changes = self.content["changes"]
+            old_body = changes["body"]["from"]
+            fmt_old_body = self.format_text_block(old_body)
+            ret = f"{fmt_sender} {action} comment on issue {fmt_issue} of {fmt_repo}:\nfrom:\n{fmt_old_body}\nto:\n{fmt_body}\n"
+        else:
+            ret = f"{fmt_sender} {action} comment on issue {fmt_issue} of {fmt_repo}:\n{fmt_body}\n"
+        return self.conv_newlines(ret)
 
 class IssueFormatter(Formatter):
-
-    def format_issue(self, href=True):
-        issue = self.content.get("issue", {})
-        url = issue.get("html_url", "")
-        issue_number = issue.get("number", "")
-        if issue_number:
-            issue_number = "#" + str(issue_number)
-        title = issue.get("title", "Unknown Title")
-        res = f"{issue_number} {title}"
-        if url and href:
-            return self.format_link(url, res)
-        else:
-            return res
 
     def format_content(self):
         repo = self.get_repo()
@@ -198,7 +223,8 @@ class IssueFormatter(Formatter):
         action = self.content.get("action", "did something unknown to")
 
         new = "new issue" if action == "opened" else "issue"
-        fmt_issue = self.format_issue()
+        issue = self.content["issue"]
+        fmt_issue = self.format_issue(issue)
 
         if self.verbose:
             pass #TODO: add more information
@@ -296,20 +322,20 @@ class PullRequestFormatter(Formatter):
         action = self.content.get("action", "unknown")
         pr = self.get_pr()
         pr_t = self.format_pr_title(pr)
-        fmt = f"{fmt_sender} {action} pull request {pr_t} in {fmt_repo}.<br />State: {pr.state}"
+        fmt = f"{fmt_sender} {action} pull request {pr_t} in {fmt_repo}.\nState: {pr.state}\n"
         if action in ["opened", "edited", "reopened", "locked", "unlocked"]:
-            return fmt
+            return self.conv_newlines(fmt)
         elif action == "closed":
             if pr.merged:
-                fmt += "<br />The pull request was merged."
+                fmt += "The pull request was merged."
                 if self.emojis:
                     fmt += self.emojidict["success"]
             else:
-                fmt += "<br />There were unmerged commits."
+                fmt += "There were unmerged commits.\n"
                 if self.emojis:
                     fmt += self.emojidict["fail"]
-            return fmt
-        return f"{fmt_sender} did something to pull request {pr_t} in {fmt_repo}<br />State: {pr.state}"
+            return self.conv_newlines(fmt)
+        return self.conv_newlines(f"{fmt_sender} did something to pull request {pr_t} in {fmt_repo}\nState: {pr.state}")
 
 
 class PushFormatter(Formatter):
@@ -343,7 +369,7 @@ class PushFormatter(Formatter):
         """
         Maybe only print last commit for non verbose?
         """
-        return "\n".join(f"<li>{self.format_commit(commit, branch=(i==0))}</li>" for (i,commit) in enumerate(commits))
+        return "".join(f"<li>{self.format_commit(commit, branch=(i==0))}</li>" for (i,commit) in enumerate(commits))
 
     def get_branch(self):
         ref = self.content.get("ref","")
@@ -372,7 +398,7 @@ class PushFormatter(Formatter):
         fmt_branch = self.format_branch(branch)
         commits = self.get_commits()
         fmt_commits = self.format_commits(commits)
-        fmt_commits = f"<ul>{fmt_commits}</ul>" if len(commits) == 0 else "No commits"
+        fmt_commits = f"<ul>{fmt_commits}</ul>" if len(commits) != 0 else "No commits"
 
         return f'{fmt_sender} pushed to {fmt_branch} of {fmt_repo}: {fmt_commits}'
 
@@ -387,6 +413,17 @@ class StarFormatter(Formatter):
         fmt = f"{fmt_sender} {action} a star for {fmt_repo}"
         return fmt
 
+class WatchFormatter(Formatter):
+
+    def format_content(self):
+        repo = self.get_repo()
+        fmt_repo = self.format_repo(repo)
+        sender = self.get_sender()
+        fmt_sender = self.format_sender(sender)
+        action = self.content.get("action", "did something related to")
+        fmt = f"{fmt_sender} {action} watching {fmt_repo}"
+        return fmt
+
 def format_event(event, content, verbose=False, emojis=True, asnotice=True):
     """
     TODO: change verbose to a verbosity level with multiple (>2) options
@@ -397,6 +434,7 @@ def format_event(event, content, verbose=False, emojis=True, asnotice=True):
             "create" : CreateFormatter,
             "delete" : DeleteFormatter,
             "fork"   : ForkFormatter,
+            "issue_comment": IssueCommentFormatter,
             "issues" : IssueFormatter,
             "member" : MemberFormatter,
             "meta"   : MetaFormatter,
@@ -405,6 +443,7 @@ def format_event(event, content, verbose=False, emojis=True, asnotice=True):
             "pull_request" : PullRequestFormatter,
             "push"   : PushFormatter,
             "star"   : StarFormatter,
+            "watch"  : WatchFormatter,
 
             }
 

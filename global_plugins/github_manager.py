@@ -7,8 +7,6 @@ import configparser
 import sys
 import hmac
 
-
-from pprint import pprint
 from collections import defaultdict
 
 from aiohttp import web
@@ -110,8 +108,6 @@ class GitHubManager:
         for i in range(len(h)):
             if h[i][0] == hookid:
                 del h[i]
-                pprint("After del")
-                pprint(h)
                 break
 
 def read_config_and_initialize():

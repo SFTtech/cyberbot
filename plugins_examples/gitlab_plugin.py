@@ -137,7 +137,7 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
         await lhm.add_token(token)
         text = f"Successfully created token."
         await plugin.send_text(text)
-        html = f"URL: {url}\ntoken: {token}"
+        html = f"URL: {url}\ntoken: {token}\n"
         await plugin.send_html(format_help(html))
 
     async def handle_remhook(args):
@@ -151,7 +151,7 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
 
     async def handle_listhooks(args):
         html = "\n".join(f"{tokenid} - " + token[:4] + (len(token)-4)*"*"
-                         for (tokenid, token) in lhm.tokens.items())
+                         for (tokenid, token) in lhm.tokens.items())+"\n"
         await plugin.send_html(format_help(html))
 
     async def handle_config(args):

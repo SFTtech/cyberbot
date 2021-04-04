@@ -137,7 +137,7 @@ See <a href="https://docs.github.com/en/developers/webhooks-and-events/about-web
         await lhm.add_token(token)
         text = f"Successfully created token."
         await plugin.send_text(text)
-        html = f"URL: {url}\ntoken: {token}\nIMPORTANT: Select content type: application/json"
+        html = f"URL: {url}\ntoken: {token}\nIMPORTANT: Select content type: application/json\n"
         await plugin.send_html(format_help(html))
 
     async def handle_remhook(args):
@@ -151,7 +151,7 @@ See <a href="https://docs.github.com/en/developers/webhooks-and-events/about-web
 
     async def handle_listhooks(args):
         html = "\n".join(f"{tokenid} - " + token[:4] + (len(token)-4)*"*"
-                         for (tokenid, token) in lhm.tokens.items())
+                         for (tokenid, token) in lhm.tokens.items())+"\n"
         await plugin.send_html(format_help(html))
 
     async def handle_config(args):
