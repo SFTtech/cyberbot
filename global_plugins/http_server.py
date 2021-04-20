@@ -7,14 +7,22 @@ CONFIGPATH = "global_plugins/config/http_server.ini"
 
 class BotHTTPServer:
 
-    def __init__(self, bind_address, bind_port):
-        self.bind_address = bind_address
-        self.bind_port = bind_port
+    def __init__(self):
+        self.bind_address = ""
+        self.bind_port = 0
+        self.url = ""
         self.registered_paths = {}
         self.bot = None
 
     async def set_bot(self, bot):
         self.bot = bot
+        if "http_server" not in self.bot.config:
+            logging.error("invite_manager: invalid config file section")
+            sys.exit(-1)
+        self.config = self.bot.config["http_server"]
+        self.bind_address = self.config.get("BIND_ADDRESS", "localhost")
+        self.bind_port = int(self.config.get("BIND_PORT", "8080"))
+        self.url = self.config.get("URL", "No URL configured in http_server")
 
     async def start(self):
         self.server = web.Server(self.handle_request)
@@ -53,20 +61,8 @@ class BotHTTPServer:
                 return web.Response(status=200)
             return res
 
-def read_config_and_initialize():
-    logging.info("Creating BotHTTPServer")
-    logging.info("Reading http_server config")
+    async def get_url(self):
+        return self.url
 
-    config = configparser.ConfigParser()
-    config.read(CONFIGPATH)
-
-    if not 'BotHTTPServer' in config.sections():
-        logging.error("""Bad config file. Please check that
-config file exists and all fields are available\n""")
-        sys.exit(-1)
-
-    vals = config['BotHTTPServer']
-    return BotHTTPServer(vals.get("BIND_ADDRESS", "localhost"), int(vals.get("BIND_PORT", "8080")))
-
-
-Object = read_config_and_initialize()
+logging.info("Creating BotHTTPServer")
+Object = BotHTTPServer()

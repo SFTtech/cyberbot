@@ -5,7 +5,6 @@ import string
 import random
 
 
-from pprint import pprint
 from collections import defaultdict
 
 from matrixroom import MatrixRoom
@@ -29,7 +28,7 @@ class LocalHookManager:
     def __init__(self, plugin):
         self.plugin = plugin
         self.tokens = defaultdict(list)
-        self.ghm = self.plugin.bot.get_global_plugin_object("github_manager") #pluginname like in the config file of global_plugins
+        self.ghm = self.plugin.bot.get_global_plugin_object("github_manager")
 
     async def load_tokens(self):
         if "githubtokens" in await self.plugin.kvstore_get_local_keys():
@@ -59,7 +58,6 @@ class LocalHookManager:
             await self.store_tokens()
 
     async def rem_token(self, tokenid):
-        pprint(self.tokens)
         if tokenid in self.tokens:
             token = self.tokens[tokenid]
             await self.ghm.deregister_hook(token, tokenid)

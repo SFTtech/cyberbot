@@ -13,20 +13,25 @@ from aiohttp import web
 
 from matrixroom import MatrixRoom
 
-CONFIGPATH = "global_plugins/config/github_manager.ini"
-
 class GitHubManager:
-    def __init__(self, url, path):
-        self.url = url
-        self.path = path
+    def __init__(self):
         self.tokens = defaultdict(list)
         self.bot = None
         self.http_server = None
         self.currenthid = 0
+        self.url = ""
 
     async def set_bot(self, bot):
         self.bot = bot
-        self.http_server = self.bot.get_global_plugin_object("http_server") #pluginname like in the config file of global_plugins
+        self.http_server = self.bot.get_global_plugin_object("http_server")
+        if "github_manager" not in self.bot.config or "path" not in self.bot.config["github_manager"]:
+            logging.error("github_manager: invalid config file section")
+            sys.exit(-1)
+        self.config = self.bot.config["github_manager"]
+
+        p = self.config["path"]
+        self.path = "/" + p if not p.startswith("/") else p
+        self.url = self.http_server.get_url()
 
     async def start(self):
         async def handle_request(request):
@@ -87,6 +92,8 @@ class GitHubManager:
             return web.Response(status=400)
 
         res = await self.http_server.register_path(self.path, handle_request) 
+        if (res == None):
+            print("Failed registering github_manager path to http_server")
 
     async def nexthookid(self):
         self.currenthid += 1
@@ -110,20 +117,5 @@ class GitHubManager:
                 del h[i]
                 break
 
-def read_config_and_initialize():
-    logging.info("Creating GitHubManager")
-    logging.info("Reading github_manager config")
-
-    config = configparser.ConfigParser()
-    config.read(CONFIGPATH)
-    if "exposed" not in config or \
-            "url" not in config["exposed"] or "path" not in config["exposed"]:
-        logging.error(
-            "Github: invalid config file")
-        sys.exit(-1)
-
-    p = config["exposed"]["path"]
-    p = "/" + p if not p.startswith("/") else p
-    return GitHubManager(url=config["exposed"]["url"], path=p)
-
-Object = read_config_and_initialize()
+logging.info("Creating GitHubManager")
+Object = GitHubManager()

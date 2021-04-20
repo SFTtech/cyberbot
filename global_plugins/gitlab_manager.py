@@ -12,20 +12,25 @@ from aiohttp import web
 
 from matrixroom import MatrixRoom
 
-CONFIGPATH = "global_plugins/config/gitlab_manager.ini"
-
 class GitLabManager:
-    def __init__(self, url, path):
-        self.url = url
-        self.path = path
+    def __init__(self):
         self.tokens = defaultdict(list)
         self.bot = None
         self.http_server = None
         self.currenthid = 0
+        self.url = ""
 
     async def set_bot(self, bot):
         self.bot = bot
-        self.http_server = self.bot.get_global_plugin_object("http_server") #pluginname like in the config file of global_plugins
+        self.http_server = self.bot.get_global_plugin_object("http_server")
+        if "gitlab_manager" not in self.bot.config or "path" not in self.bot.config["gitlab_manager"]:
+            logging.error("gitlab_manager: invalid config file section")
+            sys.exit(-1)
+        self.config = self.bot.config["gitlab_manager"]
+
+        p = self.config["path"]
+        self.path = "/" + p if not p.startswith("/") else p
+        self.url = self.http_server.get_url()
 
     async def start(self):
         async def handle_request(request):
@@ -76,6 +81,8 @@ class GitLabManager:
 
         
         res = await self.http_server.register_path(self.path, handle_request) 
+        if (res == None):
+            print("Failed registering github_manager path to http_server")
 
     async def nexthookid(self):
         self.currenthid += 1
@@ -92,27 +99,12 @@ class GitLabManager:
         return hookid
 
     async def deregister_hook(self, token, hookid):
-        # TODO: Race Conditions? -> no, because only one thread and no await
+        # Race Conditions? -> no, because only one thread and no await
         h = self.tokens[token]
         for i in range(len(h)):
             if h[i][0] == hookid:
                 del h[i]
                 break
 
-def read_config_and_initialize():
-    logging.info("Creating GitLabManager")
-    logging.info("Reading gitlab_manager config")
-
-    config = configparser.ConfigParser()
-    config.read(CONFIGPATH)
-    if "exposed" not in config or \
-            "url" not in config["exposed"] or "path" not in config["exposed"]:
-        logging.error(
-            "Gitlab: invalid config file")
-        sys.exit(-1)
-
-    p = config["exposed"]["path"]
-    p = "/" + p if not p.startswith("/") else p
-    return GitLabManager(url=config["exposed"]["url"], path=p)
-
-Object = read_config_and_initialize()
+logging.info("Creating GitLabManager")
+Object = GitLabManager()

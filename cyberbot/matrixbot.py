@@ -16,23 +16,27 @@ from plugin import Plugin
 
 import nio
 
-
+DEFAULT_BOTNAME = "Matrix Bot"
+DEFAULT_PLUGINPATH = [ "./plugins" ]
+DEFAULT_DEVICEID = "MATRIXBOT"
+DEFAULT_DBPATH = "./matrixbot.sqlite"
+DEFAULT_BIND_ADDRESS = "localhost"
+DEFAULT_BIND_PORT = "8080"
+DEFAULT_GLOBAL_PLUGINPATH = "./global_plugins"
 
 class MatrixBot:
 
+    def __init__(self, config):
+        self.config = config
 
-    def __init__(self,
-            username,
-            password,
-            homeserver,
-            botname="Matrix Bot",
-            deviceid="MATRIXBOT",
-            dbpath="./matrixbot.sqlite",
-            pluginpath=[ "./plugins" ],
-            store_path=None,
-            environment={},
-            global_plugins=[],
-            global_pluginpath=[ "./global_plugins" ]):
+        if not 'BotMatrixId' in config \
+            or not all(key in config['BotMatrixId']
+                    for key in ['USERNAME','PASSWORD','SERVER']):
+            sys.stderr.write("""Bad config file. Please check that config file exists and all fields are available\n""")
+            sys.exit(-1)
+        botc = config["BotMatrixId"]
+
+        store_path = botc.get("STOREPATH", "")
 
         if not store_path:
             store_path = Path(os.getcwd()) / "store"
@@ -50,15 +54,16 @@ class MatrixBot:
 
         logging.info(f"Store path: {store_path}")
 
-        self.client = nio.AsyncClient(homeserver, username, device_id=deviceid, store_path=str(store_path))
+        self.client = nio.AsyncClient(botc["SERVER"], botc["USERNAME"], device_id=botc.get("DEVICEID", DEFAULT_DEVICEID), store_path=str(store_path))
 
-        self.password = password
-        self.botname = botname
+        self.password = botc["PASSWORD"]
+        self.botname = botc.get("BOTNAME", DEFAULT_BOTNAME)
 
-        self.dbpath = dbpath
-        self.load_db(dbpath)
-        self.pluginpath = pluginpath
-        self.environment = environment
+        self.dbpath = botc.get("DBPATH", DEFAULT_DBPATH)
+        self.load_db(self.dbpath)
+        self.pluginpath = [p.strip() for p in botc.get("PLUGINPATH", DEFAULT_PLUGINPATH).split(";")]
+        self.environment = dict((k.upper(),v) for k,v in dict(botc).items()
+                                     if k.lower() != 'password')
         self.last_sync_time = 0
 
         self.active_rooms = set()
@@ -66,15 +71,15 @@ class MatrixBot:
         # order of global_plugins is important as they may depend on each other
         # also the non-global plugins may depend on them
         # thus we map by index between names and plugins and do not use a dict()
-        self.global_pluginpath = global_pluginpath
-        self.global_plugin_names = global_plugins
-        self.global_plugins = [None] * len(global_plugins)
+        self.global_pluginpath = botc.get("GLOBAL_PLUGINPATH", DEFAULT_GLOBAL_PLUGINPATH)
+        self.global_plugin_names = [p.strip() for p in botc.get("GLOBAL_PLUGINS", "").split(";")]
+        self.global_plugins = [None] * len(self.global_plugin_names)
 
 
         # this is a small hack to add the plugins to the import search path
-        for path in pluginpath:
+        for path in self.pluginpath:
             sys.path.append(path)
-        sys.path.append(global_pluginpath)
+        sys.path.append(self.global_pluginpath)
 
     def get_global_plugin_object(self, name):
         i = self.global_plugin_names.index(name)
