@@ -31,7 +31,7 @@ class GitHubManager:
 
         p = self.config["path"]
         self.path = "/" + p if not p.startswith("/") else p
-        self.url = self.http_server.get_url()
+        self.url = await self.http_server.get_url()
 
     async def start(self):
         async def handle_request(request):
