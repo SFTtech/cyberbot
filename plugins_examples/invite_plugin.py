@@ -4,7 +4,8 @@ import string
 
 from collections import defaultdict
 
-HELP_DESC = ("!invite\t\t\t-\tGenerate invitation link for current room. Will direct to a website where people can enter their user_id and be invited by the bot.\n")
+HELP_DESC = "!invite\t\t\t-\tGenerate invitation link for current room. Will direct to a website where people can enter their user_id and be invited by the bot.\n"
+
 
 class LocalInviteManager:
     def __init__(self, plugin):
@@ -55,6 +56,7 @@ class LocalInviteManager:
         else:
             return False
 
+
 async def register_to(plugin):
     subcommands = """invite [subcommand]
 Available subcommands:
@@ -75,9 +77,8 @@ Available subcommands:
         await plugin.send_html(formatted_subcommands, subcommands)
 
     async def handle_new(invitor, args):
-
         def gen_random_token():
-            #TODO: check for collisions
+            # TODO: check for collisions
             chars = string.ascii_letters + string.digits
             n = 32
             return "".join(random.choice(chars) for i in range(n))
@@ -89,7 +90,11 @@ Available subcommands:
         token = gen_random_token()
         await lim.add_token(token, invitor)
 
-        await plugin.send_html("Send this link to the people you want to invite to this room: <br/><pre><code>" + await gen_url(token) + "</pre></code>")
+        await plugin.send_html(
+            "Send this link to the people you want to invite to this room: <br/><pre><code>"
+            + await gen_url(token)
+            + "</pre></code>"
+        )
 
     async def handle_rm(args):
         if not args:
@@ -101,7 +106,10 @@ Available subcommands:
                 await plugin.send_text("Invalid invitation number")
 
     async def handle_list(args):
-        html = "\n".join(f"{tokenid} - {token}" for (tokenid, token) in lim.tokens.items())+"\n"
+        html = (
+            "\n".join(f"{tokenid} - {token}" for (tokenid, token) in lim.tokens.items())
+            + "\n"
+        )
         await plugin.send_html(format_help(html))
 
     async def invite_callback(room, event):

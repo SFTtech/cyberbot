@@ -16,6 +16,7 @@ import nio
 # plugins setup event listeners via api
 # sync forever
 
+
 def setup_logging(verbose=False):
     level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(stream=sys.stdout, level=level)
@@ -24,8 +25,7 @@ def setup_logging(verbose=False):
 def setup_cli():
     # Interpret command line arguments
     cli = argparse.ArgumentParser()
-    cli.add_argument("-c", "--config",
-                     help="path to the configuration file")
+    cli.add_argument("-c", "--config", help="path to the configuration file")
     cli.add_argument("-v", action="store_true", help="Enable verbose output")
     return cli
 
@@ -47,4 +47,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(main())
-    #asyncio.run(main())
+    # asyncio.run(main())

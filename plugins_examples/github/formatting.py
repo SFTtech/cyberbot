@@ -4,30 +4,25 @@ from collections import namedtuple
 # TODO: escape html
 
 
-Sender = namedtuple("Sender",["id", "login", "html_url", "avatar_url"])
+Sender = namedtuple("Sender", ["id", "login", "html_url", "avatar_url"])
 Repo = namedtuple("Repository", ["id", "name", "description", "html_url"])
 
 
 class Formatter:
-
-    def __init__(self,
-            event,
-            content,
-            verbose=False,
-            emojis=True,
-            asnotice=True):
+    def __init__(self, event, content, verbose=False, emojis=True, asnotice=True):
         self.event = event
         self.content = content
-        self.set_formatting_options(verbose,emojis,asnotice)
+        self.set_formatting_options(verbose, emojis, asnotice)
 
-    def set_formatting_options(self,
-            verbose=False,
-            emojis=True,
-            asnotice=True,):
-        self.verbose=verbose
-        self.emojis=emojis
-        self.asnotice=asnotice
-
+    def set_formatting_options(
+        self,
+        verbose=False,
+        emojis=True,
+        asnotice=True,
+    ):
+        self.verbose = verbose
+        self.emojis = emojis
+        self.asnotice = asnotice
 
     # =============
     # FORMATTING
@@ -38,7 +33,7 @@ class Formatter:
         return html representation of event with formatting options
         """
         if self.emojis:
-            #animals = "🐶🐺🦊🦝🐱🐱🦁🐯"
+            # animals = "🐶🐺🦊🦝🐱🐱🦁🐯"
             animals = "🐱"
             animal = random.choice(animals)
             return f"{animal} {self.format_content()}"
@@ -48,7 +43,6 @@ class Formatter:
     def format_content(self):
         pass
 
-
     def format_link(self, url, linktext):
         return f"<a href='{url}'>{linktext}</a>"
 
@@ -56,7 +50,6 @@ class Formatter:
         if sender.html_url and link:
             return self.format_link(f"{sender.html_url}", sender.login)
         return sender.login
-
 
     def format_repo(self, repo):
         """
@@ -68,13 +61,11 @@ class Formatter:
             res = f"{repo.name}"
         return res
 
-
     def format_branch(self, branchname):
         if self.emojis:
             return f"🌿 {branchname}"
         else:
             return f"branch {branchname}"
-
 
     def format_text_block(self, text, cut=True):
         if cut and text.count("\n") > 3:
@@ -108,10 +99,10 @@ class Formatter:
     def get_sender_from_dict(self, senderdict):
         self.defaultsender = Sender(id="", login="", html_url="", avatar_url="")
         return Sender(
-            id=senderdict.get("id",self.defaultsender.id),
-            login=senderdict.get("login",self.defaultsender.login),
-            html_url=senderdict.get("html_url",self.defaultsender.html_url),
-            avatar_url=self.content.get("avatar_url", self.defaultsender.avatar_url)
+            id=senderdict.get("id", self.defaultsender.id),
+            login=senderdict.get("login", self.defaultsender.login),
+            html_url=senderdict.get("html_url", self.defaultsender.html_url),
+            avatar_url=self.content.get("avatar_url", self.defaultsender.avatar_url),
         )
 
     def get_sender(self):
@@ -119,7 +110,6 @@ class Formatter:
             return self.defaultsender
         senderdict = self.content["sender"]
         return self.get_sender_from_dict(senderdict)
-
 
     def get_repo(self):
         if "repository" not in self.content:
@@ -129,12 +119,11 @@ class Formatter:
             id=repodict.get("id", self.defaultrepo.id),
             name=repodict.get("name", self.defaultrepo.name),
             description=repodict.get("description", self.defaultrepo.description),
-            html_url=repodict.get("html_url",self.defaultrepo.html_url)
+            html_url=repodict.get("html_url", self.defaultrepo.html_url),
         )
 
 
 class CreateFormatter(Formatter):
-
     def format_content(self):
         repo = self.get_repo()
         fmt_repo = self.format_repo(repo)
@@ -144,13 +133,14 @@ class CreateFormatter(Formatter):
         ref = self.content.get("ref", "")
         ref_type = self.content.get("ref_type", "something")
 
-        fmt_tn = f"{ref_type} {ref}" if ref_type != "branch" else self.format_branch(ref)
+        fmt_tn = (
+            f"{ref_type} {ref}" if ref_type != "branch" else self.format_branch(ref)
+        )
         fmt = f"{fmt_sender} created {fmt_tn} in {fmt_repo}"
         return fmt
 
 
 class DeleteFormatter(Formatter):
-
     def format_content(self):
         repo = self.get_repo()
         fmt_repo = self.format_repo(repo)
@@ -160,13 +150,14 @@ class DeleteFormatter(Formatter):
         ref = self.content.get("ref", "")
         ref_type = self.content.get("ref_type", "something")
 
-        fmt_tn = f"{ref_type} {ref}" if ref_type != "branch" else self.format_branch(ref)
+        fmt_tn = (
+            f"{ref_type} {ref}" if ref_type != "branch" else self.format_branch(ref)
+        )
         fmt = f"{fmt_sender} deleted {fmt_tn} in {fmt_repo}"
         return fmt
 
 
 class ForkFormatter(Formatter):
-
     def format_forkee(self, href=True):
         forkee = self.content.get("forkee", {})
         name = forkee.get("full_name", "")
@@ -185,8 +176,8 @@ class ForkFormatter(Formatter):
         fmt = f"{fmt_sender} forked {fmt_repo}: {fmt_forkee}"
         return fmt
 
-class IssueCommentFormatter(Formatter):
 
+class IssueCommentFormatter(Formatter):
     def format_content(self):
         repo = self.get_repo()
         fmt_repo = self.format_repo(repo)
@@ -212,8 +203,8 @@ class IssueCommentFormatter(Formatter):
             ret = f"{fmt_sender} {action} comment on issue {fmt_issue} of {fmt_repo}:\n{fmt_body}\n"
         return self.conv_newlines(ret)
 
-class IssueFormatter(Formatter):
 
+class IssueFormatter(Formatter):
     def format_content(self):
         repo = self.get_repo()
         fmt_repo = self.format_repo(repo)
@@ -227,10 +218,10 @@ class IssueFormatter(Formatter):
         fmt_issue = self.format_issue(issue)
 
         if self.verbose:
-            pass #TODO: add more information
+            pass  # TODO: add more information
         fmt = f"{fmt_sender} {action} {new} {fmt_issue} in {fmt_repo}"
         if action == "opened":
-            description = self.content.get('description', '')
+            description = self.content.get("description", "")
             if description is not None and description.strip() != "":
                 shortendescr = True
                 if shortendescr:
@@ -244,7 +235,6 @@ class IssueFormatter(Formatter):
 
 
 class MemberFormatter(Formatter):
-
     def format_content(self):
         repo = self.get_repo()
         fmt_repo = self.format_repo(repo)
@@ -254,8 +244,8 @@ class MemberFormatter(Formatter):
         fmt = f"{fmt_repo}: Member {fmt_sender} has been {action}"
         return fmt
 
-class MetaFormatter(Formatter):
 
+class MetaFormatter(Formatter):
     def format_content(self):
         repo = self.get_repo()
         fmt_repo = self.format_repo(repo)
@@ -267,7 +257,6 @@ class MetaFormatter(Formatter):
 
 
 class PingFormatter(Formatter):
-
     def format_content(self):
         repo = self.get_repo()
         fmt_repo = self.format_repo(repo)
@@ -278,7 +267,6 @@ class PingFormatter(Formatter):
 
 
 class PublicFormatter(Formatter):
-
     def format_content(self):
         repo = self.get_repo()
         fmt_repo = self.format_repo(repo)
@@ -293,9 +281,9 @@ class PullRequestFormatter(Formatter):
     pr_attrs = ["html_url", "number", "state", "title", "merged"]
     PR = namedtuple("PR", pr_attrs)
     emojidict = {
-            "success": "✅",
-            "fail": "❌",
-            }
+        "success": "✅",
+        "fail": "❌",
+    }
 
     def get_pr(self):
         pr = self.content.get("pull_request", {})
@@ -335,23 +323,35 @@ class PullRequestFormatter(Formatter):
                 if self.emojis:
                     fmt += self.emojidict["fail"]
             return self.conv_newlines(fmt)
-        return self.conv_newlines(f"{fmt_sender} did something to pull request {pr_t} in {fmt_repo}\nState: {pr.state}")
+        return self.conv_newlines(
+            f"{fmt_sender} did something to pull request {pr_t} in {fmt_repo}\nState: {pr.state}"
+        )
 
 
 class PushFormatter(Formatter):
 
-    commitattrs =  ["id", "message", "timestamp", "url", "author", "added", "modified", "removed"]
+    commitattrs = [
+        "id",
+        "message",
+        "timestamp",
+        "url",
+        "author",
+        "added",
+        "modified",
+        "removed",
+    ]
     Commit = namedtuple("Commit", commitattrs)
 
-    defaultcommit = Commit(id="",
-            message="",
-            timestamp="",
-            url="",
-            author=Formatter.defaultsender,
-            added="",
-            modified="",
-            removed="")
-
+    defaultcommit = Commit(
+        id="",
+        message="",
+        timestamp="",
+        url="",
+        author=Formatter.defaultsender,
+        added="",
+        modified="",
+        removed="",
+    )
 
     def format_commit(self, commit, href=True, branch=False):
         message = commit.message.split("\n")[0]
@@ -361,28 +361,30 @@ class PushFormatter(Formatter):
             fmt = f"{message}({commit.id[0:7]})"
 
         if branch:
-            fmt = "⇨ "  + fmt
+            fmt = "⇨ " + fmt
         return fmt
-
 
     def format_commits(self, commits):
         """
         Maybe only print last commit for non verbose?
         """
-        return "".join(f"<li>{self.format_commit(commit, branch=(i==0))}</li>" for (i,commit) in enumerate(commits))
+        return "".join(
+            f"<li>{self.format_commit(commit, branch=(i==0))}</li>"
+            for (i, commit) in enumerate(commits)
+        )
 
     def get_branch(self):
-        ref = self.content.get("ref","")
+        ref = self.content.get("ref", "")
         return ref.split("/")[-1]
 
     def commit_from_dict(self, commit):
         attrs = {}
         for attr in self.commitattrs:
-            attrs[attr]=commit.get(attr, getattr(self.defaultcommit,attr))
+            attrs[attr] = commit.get(attr, getattr(self.defaultcommit, attr))
         return PushFormatter.Commit(**attrs)
 
     def get_commits(self):
-        commitdicts = self.content.get("commits",[])
+        commitdicts = self.content.get("commits", [])
         commits = []
         for commit in commitdicts:
             commits.append(self.commit_from_dict(commit))
@@ -400,10 +402,10 @@ class PushFormatter(Formatter):
         fmt_commits = self.format_commits(commits)
         fmt_commits = f"<ul>{fmt_commits}</ul>" if len(commits) != 0 else "No commits"
 
-        return f'{fmt_sender} pushed to {fmt_branch} of {fmt_repo}: {fmt_commits}'
+        return f"{fmt_sender} pushed to {fmt_branch} of {fmt_repo}: {fmt_commits}"
+
 
 class StarFormatter(Formatter):
-
     def format_content(self):
         repo = self.get_repo()
         fmt_repo = self.format_repo(repo)
@@ -413,8 +415,8 @@ class StarFormatter(Formatter):
         fmt = f"{fmt_sender} {action} a star for {fmt_repo}"
         return fmt
 
-class WatchFormatter(Formatter):
 
+class WatchFormatter(Formatter):
     def format_content(self):
         repo = self.get_repo()
         fmt_repo = self.format_repo(repo)
@@ -424,6 +426,7 @@ class WatchFormatter(Formatter):
         fmt = f"{fmt_sender} {action} watching {fmt_repo}"
         return fmt
 
+
 def format_event(event, content, verbose=False, emojis=True, asnotice=True):
     """
     TODO: change verbose to a verbosity level with multiple (>2) options
@@ -431,21 +434,20 @@ def format_event(event, content, verbose=False, emojis=True, asnotice=True):
     """
     # https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads
     formatters = {
-            "create" : CreateFormatter,
-            "delete" : DeleteFormatter,
-            "fork"   : ForkFormatter,
-            "issue_comment": IssueCommentFormatter,
-            "issues" : IssueFormatter,
-            "member" : MemberFormatter,
-            "meta"   : MetaFormatter,
-            "ping"   : PingFormatter,
-            "public" : PublicFormatter,
-            "pull_request" : PullRequestFormatter,
-            "push"   : PushFormatter,
-            "star"   : StarFormatter,
-            "watch"  : WatchFormatter,
-
-            }
+        "create": CreateFormatter,
+        "delete": DeleteFormatter,
+        "fork": ForkFormatter,
+        "issue_comment": IssueCommentFormatter,
+        "issues": IssueFormatter,
+        "member": MemberFormatter,
+        "meta": MetaFormatter,
+        "ping": PingFormatter,
+        "public": PublicFormatter,
+        "pull_request": PullRequestFormatter,
+        "push": PushFormatter,
+        "star": StarFormatter,
+        "watch": WatchFormatter,
+    }
 
     if event in formatters:
         return formatters[event](event, content, verbose, emojis, asnotice).format()

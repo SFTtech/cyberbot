@@ -1,13 +1,14 @@
 import asyncio
 
-HELP_DESC = ("""
-!listplugins\t\t\t-\tlist addable plugins
-!addplugin plugin [plugin2 ...]\t-\tadd plugin(s) (--all for all)
-!remplugin plugin [plugin2 ...]\t-\tremove plugin(s)
-""")
+HELP_DESC = """
+!listplugins\t\t-\tlist addable plugins
+!addplugin plugin [...]\t-\tadd plugin(s) (--all for all)
+!remplugin plugin [...]\t-\tremove plugin(s)
+"""
 
 
 blacklisted = ["help" "meta"]
+
 
 async def register_to(plugin):
     """
@@ -17,29 +18,39 @@ async def register_to(plugin):
     async def listplugins_callback(room, event):
         available = plugin.mroom.bot.available_plugins
         pluginlist = ""
-        for k,v in available.items():
+        for k, v in available.items():
             indentet = "\t" + v[:-1].replace("\n", "\n\t") + v[-1]
             pluginlist += f"{k}:\n{indentet}\n"
 
         await plugin.send_html(f"""<pre><code>{pluginlist}</pre></code>""")
-            
+
     listplugins_handler = plugin.CommandHandler("listplugins", listplugins_callback)
     plugin.add_handler(listplugins_handler)
 
-
     async def addplugin_callback(room, event):
-        curr_plugins =  [p.pluginname for p in plugin.mroom.plugins]
-        args = event.source['content']['body'].split()
+        curr_plugins = [p.pluginname for p in plugin.mroom.plugins]
+        args = event.source["content"]["body"].split()
         if len(args) > 1 and args[1] == "--all":
-            await asyncio.gather(*(plugin.mroom.add_plugin(pname) for pname in plugin.mroom.bot.available_plugins if pname not in curr_plugins))
+            await asyncio.gather(
+                *(
+                    plugin.mroom.add_plugin(pname)
+                    for pname in plugin.mroom.bot.available_plugins
+                    if pname not in curr_plugins
+                )
+            )
         else:
-            await asyncio.gather(*(plugin.mroom.add_plugin(pname) for pname in args[1:] if pname not in curr_plugins))
+            await asyncio.gather(
+                *(
+                    plugin.mroom.add_plugin(pname)
+                    for pname in args[1:]
+                    if pname not in curr_plugins
+                )
+            )
 
         await plugin.send_text("Call !help to see new plugins")
 
     addplugin_handler = plugin.CommandHandler("addplugin", addplugin_callback)
     plugin.add_handler(addplugin_handler)
-
 
     async def remplugin_callback(room, event):
         args = plugin.extract_args(event)

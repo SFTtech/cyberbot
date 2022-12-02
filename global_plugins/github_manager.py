@@ -15,6 +15,7 @@ from matrixroom import MatrixRoom
 
 logger = logging.getLogger(__name__)
 
+
 class GitHubManager:
     def __init__(self):
         self.tokens = defaultdict(list)
@@ -26,7 +27,10 @@ class GitHubManager:
     async def set_bot(self, bot):
         self.bot = bot
         self.http_server = self.bot.get_global_plugin_object("http_server")
-        if "github_manager" not in self.bot.config or "path" not in self.bot.config["github_manager"]:
+        if (
+            "github_manager" not in self.bot.config
+            or "path" not in self.bot.config["github_manager"]
+        ):
             logger.error("github_manager: invalid config file section")
             sys.exit(-1)
         self.config = self.bot.config["github_manager"]
@@ -40,17 +44,17 @@ class GitHubManager:
             if request.method == "GET":
                 logger.info(f"Github: Got GET request to webhook. Sending ooops page.")
                 text = """
-<html>
-    <head>
-        <title>Ooooooooooops</title>
-    </head>
+                    <html>
+                        <head>
+                            <title>Ooooooooooops</title>
+                        </head>
 
-    <body>
-        <p>Please don't open the url in your browser, but rather paste the url and the token into your page's github webhook settings under Settings/Webhooks.</p>
-    </body>
-</html>
-"""
-                return web.Response(text=text, content_type='text/html')
+                        <body>
+                            <p>Please don't open the url in your browser, but rather paste the url and the token into your page's github webhook settings under Settings/Webhooks.</p>
+                        </body>
+                    </html>
+                """
+                return web.Response(text=text, content_type="text/html")
 
             if request.path != self.path:
                 logger.info(f"Github: ignoring request to wrong path: {request.path}")
@@ -59,15 +63,14 @@ class GitHubManager:
             if request.method != "POST":
                 return web.Response(status=404)
 
-            
             c = await request.content.read()
             with open("hookslog.txt", "ab+") as f:
                 f.write(c)
-            
-            if ("X-Hub-Signature-256" not in request.headers):
+
+            if "X-Hub-Signature-256" not in request.headers:
                 return web.Response(status=400)
             sig = request.headers.get("X-Hub-Signature-256").split("=")[1]
-            if ("X-GitHub-Event" not in request.headers):
+            if "X-GitHub-Event" not in request.headers:
                 return web.Response(status=400)
             event = request.headers.get("X-GitHub-Event")
 
@@ -79,7 +82,7 @@ class GitHubManager:
 
             for token in self.tokens:
                 h = hmac.new(bytes(token, encoding="utf8"), c, "sha256")
-                if (hmac.compare_digest(h.hexdigest(), sig)):
+                if hmac.compare_digest(h.hexdigest(), sig):
                     handlers = [handler for (hid, handler) in self.tokens[token]]
                     try:
                         content = json.loads(c.decode("utf-8"))
@@ -89,12 +92,13 @@ class GitHubManager:
                         print(f"content: {content}")
                         return web.Response(status=400)
                     await asyncio.gather(
-                        *(handler.handle(token, event, content) for handler in handlers))
+                        *(handler.handle(token, event, content) for handler in handlers)
+                    )
                     return web.Response(text="OK")
             return web.Response(status=400)
 
-        res = await self.http_server.register_path(self.path, handle_request) 
-        if (res == None):
+        res = await self.http_server.register_path(self.path, handle_request)
+        if res == None:
             print("Failed registering github_manager path to http_server")
 
     async def nexthookid(self):
@@ -118,6 +122,7 @@ class GitHubManager:
             if h[i][0] == hookid:
                 del h[i]
                 break
+
 
 logger.info("Creating GitHubManager")
 Object = GitHubManager()

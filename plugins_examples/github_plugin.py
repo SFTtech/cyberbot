@@ -11,12 +11,13 @@ from matrixroom import MatrixRoom
 import github.formatting as fmt
 
 
-HELP_DESC = ("!github\t\t\t-\tGithub Webhook Manager/Notifier 🐱\n")
+HELP_DESC = "!github\t\t\t-\tGithub Webhook Manager/Notifier 🐱\n"
 
 DEFAULTCONFIG = {
     "emoji": True,
     "notification": True,
 }
+
 
 class LocalHookManager:
     """
@@ -76,10 +77,15 @@ class LocalHookManager:
         else:
             config = DEFAULTCONFIG
         text = fmt.format_event(
-            event, content, verbose=False, emojis=config['emoji'], asnotice=config['notification'])
+            event,
+            content,
+            verbose=False,
+            emojis=config["emoji"],
+            asnotice=config["notification"],
+        )
         # await self.plugin.send_notice(text)
         if text is not None:
-            if config['notification']:
+            if config["notification"]:
                 await self.plugin.send_htmlnotice(text)
             else:
                 await self.plugin.send_html(text)
@@ -115,6 +121,7 @@ See <a href="https://docs.github.com/en/developers/webhooks-and-events/about-web
 """
 
     lhm = LocalHookManager(plugin)
+
     await lhm.load_tokens()
 
     def format_help(text):
@@ -147,8 +154,13 @@ See <a href="https://docs.github.com/en/developers/webhooks-and-events/about-web
                 await plugin.send_text("Invalid Tokennr")
 
     async def handle_listhooks(args):
-        html = "\n".join(f"{tokenid} - " + token[:4] + (len(token)-4)*"*"
-                         for (tokenid, token) in lhm.tokens.items())+"\n"
+        html = (
+            "\n".join(
+                f"{tokenid} - " + token[:4] + (len(token) - 4) * "*"
+                for (tokenid, token) in lhm.tokens.items()
+            )
+            + "\n"
+        )
         await plugin.send_html(format_help(html))
 
     async def handle_config(args):
@@ -158,19 +170,30 @@ See <a href="https://docs.github.com/en/developers/webhooks-and-events/about-web
 
         config = json.loads(await plugin.kvstore_get_local_value("config"))
         if len(args) == 0:
-            await plugin.send_html(format_help("\n".join(f"{k}:\t{v}" for k,v
-                in config.items()) + "\nPlease use !github config set KEY VAL for changing a value"))
-        elif len(args) == 3 and args[0] == "set" and args[1] in config and args[2].lower() in ["true", "false"]:
-            config[args[1]] = (args[2].lower() == "true")
+            await plugin.send_html(
+                format_help(
+                    "\n".join(f"{k}:\t{v}" for k, v in config.items())
+                    + "\nPlease use !github config set KEY VAL for changing a value"
+                )
+            )
+        elif (
+            len(args) == 3
+            and args[0] == "set"
+            and args[1] in config
+            and args[2].lower() in ["true", "false"]
+        ):
+            config[args[1]] = args[2].lower() == "true"
             await plugin.kvstore_set_local_value("config", json.dumps(config))
             await plugin.send_text(f"Successfully changed {args[1]} to {args[2]}")
         else:
-            await plugin.send_text("Please use !github config set <key> <val> for changing a value")
+            await plugin.send_text(
+                "Please use !github config set <key> <val> for changing a value"
+            )
 
     async def github_callback(room, event):
         #        fmttest='''Thomas(thomas@example.com) pushed to branch master of project cyber-slurm https://gitlab.rbg.tum.de/cyber/cyber-slurm/-/tree/master
-        #- Fix bug 1 (test.com)
-        #- Fix readme (test.com)
+        # - Fix bug 1 (test.com)
+        # - Fix readme (test.com)
         #'''
         # await plugin.send_notice(fmttest)
         args = plugin.extract_args(event)

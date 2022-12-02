@@ -1,10 +1,10 @@
 import json
-HELP_DESC = ("""!doing <TASKNAME>\t\t\t-\tTell people that you are doing a specific task
+
+HELP_DESC = """!doing <TASKNAME>\t\t\t-\tTell people that you are doing a specific task
 !done <TASKNAME>\t\t\t-\tRemove yourself from task
 !finished <TASKNAME>\t\t-\tMark task as solved/finished and remove from task list
 !cleardoing\t\t-\tClear current task mapping
-""")
-
+"""
 
 
 async def register_to(plugin):
@@ -37,12 +37,11 @@ async def register_to(plugin):
 
     async def get_name_link(user_id):
         dn = await get_displayname(user_id)
-        if (dn == None):
+        if dn == None:
             return "Name error"
         # link does not show up anymore
         return dn
         # return f"<a href='https://matrix.to/#/{user_id}'>{dn}</a>"
-         
 
     async def print_mapping():
         nonlocal mapping
@@ -59,9 +58,9 @@ async def register_to(plugin):
         arg = get_arg_as_single(event)
 
         if arg not in mapping:
-            mapping[arg] = [event.source['sender']]
-        elif event.source['sender'] not in mapping[arg]:
-            mapping[arg].append(event.source['sender'])
+            mapping[arg] = [event.source["sender"]]
+        elif event.source["sender"] not in mapping[arg]:
+            mapping[arg].append(event.source["sender"])
         await save_mapping()
         await print_mapping()
 
@@ -75,8 +74,8 @@ async def register_to(plugin):
         nonlocal mapping
         arg = get_arg_as_single(event)
 
-        if (arg in mapping):
-            sender_id = event.source['sender']
+        if arg in mapping:
+            sender_id = event.source["sender"]
             if sender_id in mapping[arg]:
                 mapping[arg].remove(sender_id)
                 if len(mapping[arg]) == 0:
@@ -89,7 +88,7 @@ async def register_to(plugin):
         nonlocal mapping
         arg = get_arg_as_single(event)
 
-        if (arg in mapping):
+        if arg in mapping:
             mapping.pop(arg)
 
         await save_mapping()

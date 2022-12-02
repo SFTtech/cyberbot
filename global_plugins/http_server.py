@@ -5,8 +5,8 @@ from aiohttp import web
 
 logger = logging.getLogger(__name__)
 
-class BotHTTPServer:
 
+class BotHTTPServer:
     def __init__(self):
         self.bind_address = ""
         self.bind_port = 0
@@ -51,8 +51,8 @@ class BotHTTPServer:
         return path
 
     async def handle_request(self, request):
-        paths_parts = request.path.split('/')
-    
+        paths_parts = request.path.split("/")
+
         part = paths_parts[1]
 
         if part not in self.registered_paths:
@@ -65,6 +65,7 @@ class BotHTTPServer:
 
     async def get_url(self):
         return self.url
+
 
 logger.info("Creating BotHTTPServer")
 Object = BotHTTPServer()
