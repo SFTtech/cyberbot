@@ -166,6 +166,11 @@ class Plugin:
     async def invite(self, user_id):
         await self.client.room_invite(self.nio_room.room_id, user_id)
 
+    async def set_room_topic(self, description):
+        """
+        Updates the room description
+        """
+        res = await self.client.update_room_topic(self.nio_room.room_id, description)
 
     async def send_image(self, filename):
         p = pathlib.Path(filename)
