@@ -1,4 +1,3 @@
-from pprint import pprint
 from collections import defaultdict
 import json
 import time
@@ -78,7 +77,6 @@ async def register_to(plugin):
 
 
         async def from_list(l):
-            print(l)
             name,creator,duration,voted,options,votes,creation = l
             vs = defaultdict(int)
             if duration == "None":
@@ -96,9 +94,7 @@ async def register_to(plugin):
         async def start_timer(self):
 
             async def cleanup():
-                print("In clenaup")
                 await self.voting.close_poll(self.name)
-                print("Save")
                 await self.voting.save()
                 if self.creation + self.duration <= int(time.time()):
                     t = f"Poll Deadline\n"
@@ -108,14 +104,10 @@ async def register_to(plugin):
                 await plugin.send_text(t)
 
             async def check():
-                print("checking..")
                 if self.creation + self.duration <= int(time.time()):
                     if self.task is not None:
-                        print("Triggering cancel")
                         self.task.cancel()
                         self.task = None
-                    else:
-                        print("Task is None")
 
             self.task = await plugin.start_repeating_task(check, cleanup=cleanup)
 
@@ -211,7 +203,6 @@ async def register_to(plugin):
 
     # Echo back the given command
     async def voting_callback(room, event):
-        print(room.nio_room.users.get(event.sender).power_level)
         args = plugin.extract_args(event)
         args.pop(0)
         #await plugin.send_text(event['sender'] + ': ' + ' '.join(args))
@@ -278,7 +269,7 @@ async def register_to(plugin):
             name = args[1]
             option = args[2]
             if not await voting.vote(name, option, event.sender):
-                plugin.send_text("Error. Check that you haven't voted already and that the poll exists")
+                await plugin.send_text("Error. Check that you haven't voted already and that the poll exists")
             await voting.save()
 
 

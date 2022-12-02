@@ -3,6 +3,8 @@ import asyncio
 import nio
 from aiohttp import web
 
+logger = logging.getLogger(__name__)
+
 class InviteManager:
 
     def __init__(self):
@@ -16,7 +18,7 @@ class InviteManager:
         self.bot = bot
         self.http_server = self.bot.get_global_plugin_object("http_server")
         if "invite_manager" not in self.bot.config or "path" not in self.bot.config["invite_manager"]:
-            logging.error("invite_manager: invalid config file section")
+            logger.error("invite_manager: invalid config file section")
             sys.exit(-1)
         self.config = self.bot.config["invite_manager"]
 
@@ -80,7 +82,7 @@ class InviteManager:
     async def deregister_invitation(self, token):
         del self.invitations[token]
 
-logging.info("Creating InviteManager")
+logger.info("Creating InviteManager")
 Object = InviteManager()
 
 

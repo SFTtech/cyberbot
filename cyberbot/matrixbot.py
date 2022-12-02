@@ -24,6 +24,8 @@ DEFAULT_BIND_ADDRESS = "localhost"
 DEFAULT_BIND_PORT = "8080"
 DEFAULT_GLOBAL_PLUGINPATH = "./global_plugins"
 
+logger = logging.getLogger(__name__)
+
 class MatrixBot:
 
     def __init__(self, config):
@@ -44,15 +46,15 @@ class MatrixBot:
             store_path = Path(store_path)
 
         if not store_path.is_dir():
-            logging.info(f"Creating store directory in {store_path}")
+            logger.info(f"Creating store directory in {store_path}")
             try:
                 os.mkdir(store_path)
             except Exception as e:
-                logging.error("Failed to create store path. Check permissions.")
+                logger.error("Failed to create store path. Check permissions.")
                 print(e)
                 sys.exit(-1)
 
-        logging.info(f"Store path: {store_path}")
+        logger.info(f"Store path: {store_path}")
 
         self.client = nio.AsyncClient(botc["SERVER"], botc["USERNAME"], device_id=botc.get("DEVICEID", DEFAULT_DEVICEID), store_path=str(store_path))
 
@@ -87,6 +89,7 @@ class MatrixBot:
 
 
     async def start_global_plugins(self):
+        logger.info("Starting global plugins")
         for i in range(len(self.global_plugin_names)):
             # it's the plugin's job to set up that this works
             await self.global_plugins[i].Object.set_bot(self)
@@ -98,17 +101,16 @@ class MatrixBot:
         hname = socket.gethostname()
         response = await self.client.login(self.password, device_name=hname)
         if type(response) == nio.LoginError:
-            logging.error("""There was an error while logging in. Please check
-credentials""")
+            logger.error("There was an error while logging in. Please check credentials")
             sys.exit(-1)
         k = await self.client.sync() # otherwise all past messages will be handled
         self.last_sync_time = time.time()
         if self.client.should_upload_keys:
             await self.client.keys_upload()
         cur_displayname = (await self.client.get_displayname()).displayname
-        logging.info(f"Current displayname: {cur_displayname}")
+        logger.info(f"Current displayname: {cur_displayname}")
         if cur_displayname != self.botname:
-            logging.info(f"Changing displayname to {self.botname}")
+            logger.info(f"Changing displayname to {self.botname}")
             await self.client.set_displayname(self.botname)
 
     async def __aenter__(self):
@@ -121,6 +123,7 @@ credentials""")
 
 
     def load_db(self, dbname):
+        logger.info(f"Opening Database {dbname}")
         self.conn = sqlite3.connect(dbname)
         c = self.conn.cursor()
         tables = c.execute("""
@@ -179,6 +182,7 @@ credentials""")
 
 
     async def load_rooms(self):
+        logger.info("Loading Roomns")
         joined_rooms = self.client.rooms
         cursor = self.conn.cursor()
         res = cursor.execute("""
@@ -195,9 +199,10 @@ credentials""")
                 await mr.load_plugins()
                 self.active_rooms.add(mr)
 
+
     async def read_plugins(self):
         plugin_paths = [Path(path) for path in self.pluginpath]
-        logging.info("Reading available plugins from: {}".format(plugin_paths))
+        logger.info(f"Reading available plugins from: {plugin_paths}")
 
         help_module = None
 
@@ -211,20 +216,22 @@ credentials""")
                     module = loader.load_module(modname)
                     self.global_plugins[i] = module
                 except Exception as e:
-                    logging.warning(e)
+                    logger.error(f"Failed to Load global plugin {modname}")
+
         # plugins must be called ...plugin.py, so other modules in the same
         # directory are not falsely loaded (allows for plugin decomposition)
         for plugin_path in plugin_paths:
             for path in plugin_path.glob("*_plugin.py"):
                 if path.exists():
                     modname = f'plugins.{path.stem}'
+                    logger.info(f"importing {modname}")
                     loader = importlib.machinery.SourceFileLoader(modname, str(path))
                     try:
                         module = loader.load_module(modname)
                         pluginname = path.stem.replace("_plugin","")
                         self.available_plugins[pluginname] = module.HELP_DESC
                     except Exception as e:
-                        logging.warning(e)
+                        logger.warning(e)
         await self.enter_plugins_to_db()
 
     async def enter_plugins_to_db(self):
@@ -254,32 +261,32 @@ credentials""")
                 jrooms = await self.client.joined_rooms()
                 jrooms = jrooms.rooms
             except:
-                logging.warning(f"Not joining room {room.room_id}")
+                logger.warning(f"Not joining room {room.room_id}")
                 return
             if room.room_id not in jrooms:
-                logging.info(f"Try joining room {room.room_id}")
+                logger.info(f"Try joining room {room.room_id}")
                 await asyncio.sleep(0.5)
                 response = await self.client.join(room.room_id)
                 await asyncio.sleep(0.5)
                 if type(response) == nio.responses.JoinResponse:
                     self.active_rooms.add(await MatrixRoom.new(self,room))
                 else:
-                    logging.warning(f"Couldn't joing the room: {response}")
+                    logger.warning(f"Couldn't joing the room: {response}")
             else:
-                logging.warning(f"Not joining room {room.room_id}")
-                logging.warning(f"Already joined.")
+                logger.warning(f"Not joining room {room.room_id}")
+                logger.warning(f"Already joined.")
 
 
         async def handle_text_event(room, event):
             # we ignore messages older than 5secs before last sync to solve
             # joining new room and interpreting old messages problem
-            logging.debug(str(event))
+            logger.debug(str(event))
             if (self.last_sync_time-5)*1000 > event.server_timestamp:
-                logging.debug("Ignoring old event")
+                logger.debug("Ignoring old event")
                 return
 
             if event.sender == self.client.user:
-                logging.debug("Ignoring own message")
+                logger.debug("Ignoring own message")
                 return
 
             matching_rooms = [mroom for mroom in self.active_rooms if
@@ -289,7 +296,7 @@ credentials""")
                     await matching_rooms[0].handle_text_event(event)
                 except Exception as e:
                     traceback.print_exc()
-                    logging.warning(e)
+                    logger.warning(e)
                     try:
                         k = traceback.format_exc()
                         if "ADMIN" in self.environment:
@@ -301,18 +308,18 @@ credentials""")
                         await Plugin.send_text(self, k)
                     except Exception as e:
                         traceback.print_exc()
-                        logging.warning(e)
+                        logger.warning(e)
             else:
-                logging.info("Ignoring text event in non-active room")
+                logger.info("Ignoring text event in non-active room")
 
         async def event_cb(room, *args):
             event = args[0]
-            logging.debug(80 * "=")
+            logger.debug(80 * "=")
             #pprint(vars(event))
             if room.room_id in self.client.rooms:
-                logging.debug(f"{type(event)} in room {self.client.rooms[room.room_id].display_name})")
+                logger.debug(f"{type(event)} in room {self.client.rooms[room.room_id].display_name})")
             else:
-                logging.debug(type(event), "in room", room.room_id)
+                logger.debug(type(event), "in room", room.room_id)
 
             if type(event) == nio.events.invite_events.InviteMemberEvent:
                 await handle_invite_event(room, event)
@@ -320,10 +327,10 @@ credentials""")
                 await handle_text_event(room, event)
             elif type(event) == nio.events.room_events.RoomMemberEvent:
                 name = event.source.get("sender")
-                logging.info(f"{name} joined room")
+                logger.info(f"{name} joined room")
             elif type(event) == nio.MegolmEvent:
-                logging.debug("account shared:", self.client.olm_account_shared)
-                logging.warning("Unable to decrypt event")
+                logger.debug("account shared:", self.client.olm_account_shared)
+                logger.warning("Unable to decrypt event")
                 print(f"Event session ID {event.session_id}")
                 r = nio.crypto.OutgoingKeyRequest(event.session_id, None, None, None)
                 self.client.store.remove_outgoing_key_request(r)
@@ -332,32 +339,32 @@ credentials""")
                 res = await self.client.request_room_key(event) # should do updating by itself
                 #event_cb(room, event)
             else:
-                logging.debug("Ignoring unknown type event")
+                logger.debug("Ignoring unknown type event")
 
 
         async def response_cb(response):
-            logging.debug("Got response")
-            logging.debug(type(response))
+            logger.debug("Got response")
+            logger.debug(type(response))
             self.last_sync_time = time.time()
-            logging.debug("Ignoring response")
+            logger.debug("Ignoring response")
 
         async def todevice_cb(request):
-            logging.debug(80 * "=")
-            logging.debug("Got to device request")
-            logging.debug(type(request))
-            logging.debug("Ignoring to device request")
+            logger.debug(80 * "=")
+            logger.debug("Got to device request")
+            logger.debug(type(request))
+            logger.debug("Ignoring to device request")
 
         async def ephemeral_cb(arg1, arg2):
-            logging.debug(80 * "=")
-            logging.debug("Got ephemeral dings")
-            logging.debug(f"{type(arg1)}, {type(arg2)}")
-            logging.debug("Ignoring ephemeral dings")
+            logger.debug(80 * "=")
+            logger.debug("Got ephemeral dings")
+            logger.debug(f"{type(arg1)}, {type(arg2)}")
+            logger.debug("Ignoring ephemeral dings")
 
         async def kick_response_cb(response):
-            logging.info("Getting kicked")
+            logger.info("Getting kicked")
 
 
-        logging.info(f"{self.botname} lauert nun.")
+        logger.info(f"{self.botname} lauert nun.")
 
 
 

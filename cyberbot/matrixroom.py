@@ -21,9 +21,14 @@ class MatrixRoom():
         self.room_id = nio_room.room_id
         self.client = matrixbot.client
         self.plugins = []
+        self.log = logging.getLogger(f"{__name__}.{self.room_id}")
 
+
+    def __str__(self):
+        return f"Matrix Room: {self.room_id}"
 
     async def load_plugins(self):
+        self.log.info("Loading Plugins for Room")
         c = self.bot.conn.cursor()
         r = c.execute("""
         SELECT pluginname
@@ -48,7 +53,7 @@ class MatrixRoom():
 
     async def introduce_bot(self):
         try:
-            logging.info(f"Introducing myself to {self.room_id}")
+            self.log.info(f"Introducing myself to {self.room_id}")
             txt = f"""Hi, my name is {self.bot.botname}! I was just (re)started. Type !help to see my (new) capabilities."""
             await self.client.room_send(
                     room_id=self.room_id,
@@ -59,7 +64,7 @@ class MatrixRoom():
                     },
                     ignore_unverified_devices=True)
         except Exception as e:
-            logging.info(f"Exception: {e}")
+            self.log.info(f"Exception: {e}")
 
     @classmethod
     async def new(cls, bot, nio_room):
@@ -87,11 +92,12 @@ class MatrixRoom():
         return room
 
     async def add_plugin(self, pluginname):
+        # TODO show error in chat
         if not pluginname in self.bot.available_plugins:
-            logging.warning(f"{self.room_id} tried to load invalid plugin {pluginname}")
+            self.log.warning(f"tried to load invalid plugin {pluginname}")
             return
         if pluginname in [p.pluginname for p in self.plugins]:
-            logging.warning(f"{self.room_id} tried to load already loaded plugin {pluginname}")
+            self.log.warning(f"tried to load already loaded plugin {pluginname}")
             return
         c = self.bot.conn.cursor()
         r = c.execute("""
@@ -99,13 +105,14 @@ class MatrixRoom():
         VALUES (?,?); 
         """, (self.room_id, pluginname))
         self.bot.conn.commit()
-
+        self.log.info(f"Adding plugin {pluginname} to room")
         plugin = Plugin(self, pluginname)
         self.plugins.append(plugin)
         # this has to be the last statement to prevent race conditions
         await plugin.load()
 
     async def remove_plugin(self, pluginname):
+        self.log.info(f"Removeing plugin {pluginname} from room")
         # no need for lock as only yielding point of control flow is await statement, which is last
         c = self.bot.conn.cursor()
         # we put this before the if block to be able to remove plugins that are left by accident

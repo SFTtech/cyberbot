@@ -12,6 +12,8 @@ from aiohttp import web
 
 from matrixroom import MatrixRoom
 
+logger = logging.getLogger(__name__)
+
 class GitLabManager:
     def __init__(self):
         self.tokens = defaultdict(list)
@@ -24,7 +26,7 @@ class GitLabManager:
         self.bot = bot
         self.http_server = self.bot.get_global_plugin_object("http_server")
         if "gitlab_manager" not in self.bot.config or "path" not in self.bot.config["gitlab_manager"]:
-            logging.error("gitlab_manager: invalid config file section")
+            logger.error("gitlab_manager: invalid config file section")
             sys.exit(-1)
         self.config = self.bot.config["gitlab_manager"]
 
@@ -35,7 +37,7 @@ class GitLabManager:
     async def start(self):
         async def handle_request(request):
             if request.method == "GET":
-                logging.info(f"Gitlab: Got GET request to webhook. Sending ooops page.")
+                logger.info(f"Gitlab: Got GET request to webhook. Sending ooops page.")
                 text = """
 <html>
     <head>
@@ -50,7 +52,7 @@ class GitLabManager:
                 return web.Response(text=text, content_type='text/html')
 
             if request.path != self.path:
-                logging.info(f"Gitlab: ignoring request to wrong path: {request.path}")
+                logger.info(f"Gitlab: ignoring request to wrong path: {request.path}")
                 return
 
             if request.method != "POST":
@@ -106,5 +108,5 @@ class GitLabManager:
                 del h[i]
                 break
 
-logging.info("Creating GitLabManager")
+logger.info("Creating GitLabManager")
 Object = GitLabManager()

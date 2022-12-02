@@ -23,22 +23,21 @@ class Plugin:
         self.client = mroom.bot.client
 
         self.tasks = set()
+        self.log = logging.getLogger(f"{__name__}.{mroom.room_id}.{pluginname}")
 
     async def load(self):
         filename = self.pluginname + "_plugin.py"
         full_plugin_path = None
+        self.log.info(f"Loading ...")
         for path in self.bot.pluginpath:
             p = Path(path).resolve()
             if (p / filename ).exists():
                 full_plugin_path = p / filename
                 break
         if full_plugin_path is None:
-            logging.warning(f"""
-            Room {self.mroom.room_id}: couldn't load plugin {self.pluginname}: file does not exist
-            """)
+            self.log.warning(f"Couldn't load plugin {self.pluginname}: file does not exist")
             return False
 
-        logging.info(f"Room {self.nio_room.room_id}: trying to load {full_plugin_path}")
         modname = f'plugins.{self.pluginname}'
         loader = importlib.machinery.SourceFileLoader(modname,
                 str(full_plugin_path))
@@ -49,7 +48,7 @@ class Plugin:
             return True
         except Exception as e:
             traceback.print_exc()
-            logging.warning(str(e))
+            self.log.warning(str(e))
             return False
 
     def add_handler(self, handler):

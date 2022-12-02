@@ -1,5 +1,4 @@
 import json
-import logging
 import asyncio
 import string
 import random
@@ -71,7 +70,7 @@ class LocalHookManager:
         """
         called by GitHubManager when a hook event occurs
         """
-        logging.info(f"Token event received: {event}")
+        self.plugin.log.info(f"Token event received: {event}")
         if "config" in await self.plugin.kvstore_get_local_keys():
             config = json.loads(await self.plugin.kvstore_get_local_value("config"))
         else:

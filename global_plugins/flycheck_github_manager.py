@@ -13,6 +13,7 @@ from aiohttp import web
 
 from matrixroom import MatrixRoom
 
+
 logger = logging.getLogger(__name__)
 
 class GitHubManager:

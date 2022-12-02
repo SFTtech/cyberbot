@@ -3,7 +3,7 @@ import sys
 import configparser
 from aiohttp import web
 
-CONFIGPATH = "global_plugins/config/http_server.ini"
+logger = logging.getLogger(__name__)
 
 class BotHTTPServer:
 
@@ -17,7 +17,7 @@ class BotHTTPServer:
     async def set_bot(self, bot):
         self.bot = bot
         if "http_server" not in self.bot.config:
-            logging.error("invite_manager: invalid config file section")
+            logger.error("invite_manager: invalid config file section")
             sys.exit(-1)
         self.config = self.bot.config["http_server"]
         self.bind_address = self.config.get("BIND_ADDRESS", "localhost")
@@ -31,9 +31,11 @@ class BotHTTPServer:
 
         self.site = web.TCPSite(self.runner, self.bind_address, self.bind_port)
         await self.site.start()
+        logger.info(f"serving on {self.url} {self.bind_address}:{self.bind_port}")
 
     async def register_path(self, path, handler):
         """Returns the registered path e.g. for localhost/hallo/ -> hallo. None if path already has been registered."""
+        logger.info(f"Registering path {path}")
         path = path.replace("/", "")
         if path in self.registered_paths or len(path) == 0:
             return None
@@ -64,5 +66,5 @@ class BotHTTPServer:
     async def get_url(self):
         return self.url
 
-logging.info("Creating BotHTTPServer")
+logger.info("Creating BotHTTPServer")
 Object = BotHTTPServer()
