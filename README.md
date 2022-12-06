@@ -3,7 +3,20 @@
 
 A matrix chatbot written in python.
 
-**Requirements**:
+**Install**:
+
+```sh
+cd /srv
+git clone https://gitlab.stusta.de/stustanet/bernd-lauert
+cd bernd-lauert
+virtualevn -p python3 venv
+source venv/bin/activate
+# install olm (have a look at https://gitlab.matrix.org/matrix-org/olm)
+pip install python-olm --extra-index-url https://gitlab.matrix.org/api/v4/projects/27/packages/pypi/simple
+# install python requirements
+pip install -r requirements.txt
+chown -R bernd:bernd /srv/bernd-lauert
+```
 
 All required python modules are listed in the requirements.txt
 file. Furthermore the bot needs read and write permissions in the installation
@@ -27,6 +40,7 @@ python cyberbot -c <config_file>
 To add the bot to a room, invite it via your matrix client. The bot will join
 automatically.
 
+Adapt the systemd service to match with your setup and enable the bot with `systemctl enable --now cyberbot.service`
 
 **Commands**:
 
