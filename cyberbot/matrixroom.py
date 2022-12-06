@@ -112,7 +112,7 @@ class MatrixRoom():
         await plugin.load()
 
     async def remove_plugin(self, pluginname):
-        self.log.info(f"Removeing plugin {pluginname} from room")
+        self.log.info(f"Removing plugin {pluginname} from room")
         # no need for lock as only yielding point of control flow is await statement, which is last
         c = self.bot.conn.cursor()
         # we put this before the if block to be able to remove plugins that are left by accident

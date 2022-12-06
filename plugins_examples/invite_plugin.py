@@ -120,7 +120,7 @@ Available subcommands:
         elif args[0] == "new":
             args.pop(0)
             try:
-                invitor = (await room.client.get_displayname(event.sender)).displayname
+                invitor = await plugin.get_sender_name(event)
             except:
                 invitor = "Unknown Invitor"
             await handle_new(invitor, args)

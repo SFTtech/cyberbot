@@ -429,6 +429,12 @@ class Plugin:
     # =============================================
     # Plugin helper functions (misc)
     # ==============================================
+    async def format_user_highlight(self, user_id, display_name=None):
+        """Format a hightlight to reference a user in a room. This message needs to be sent as html"""
+        if display_name == None:
+            display_name = (await self.client.get_displayname(user_id)).displayname
+        return f'<a href="https://matrix.to/#/{user_id}">{display_name}</a>'
+
     @staticmethod
     def extract_args(event):
         return shlex.split(event.source["content"]["body"])
