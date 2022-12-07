@@ -110,6 +110,7 @@ class MatrixBot:
     async def login(self):
         import socket
 
+        logger.info("Logging Bot in")
         hname = socket.gethostname()
         response = await self.client.login(self.password, device_name=hname)
         if type(response) == nio.LoginError:
@@ -321,11 +322,11 @@ class MatrixBot:
             # joining new room and interpreting old messages problem
             logger.debug(str(event))
             if (self.last_sync_time - 5) * 1000 > event.server_timestamp:
-                logger.debug("Ignoring old event")
+                logger.debug(f"Ignoring old event in room {room.room_id}")
                 return
 
             if event.sender == self.client.user:
-                logger.debug("Ignoring own message")
+                logger.debug(f"Ignoring own message in room {room.room_id}")
                 return
 
             matching_rooms = [
@@ -350,7 +351,7 @@ class MatrixBot:
                         traceback.print_exc()
                         logger.warning(e)
             else:
-                logger.info("Ignoring text event in non-active room")
+                logger.info(f"Ignoring text event in non-active room {room.room_id}")
 
         async def event_cb(room, *args):
             event = args[0]
@@ -369,9 +370,9 @@ class MatrixBot:
                 await handle_text_event(room, event)
             elif type(event) == nio.events.room_events.RoomMemberEvent:
                 name = event.source.get("sender")
-                logger.info(f"{name} joined room")
+                logger.info(f"membership of {name} changed in room {room.room_id} from {event.prev_membership} to {event.membership}")
             elif type(event) == nio.MegolmEvent:
-                logger.debug("account shared:", self.client.olm_account_shared)
+                logger.debug(f"account shared: {self.client.olm_account_shared}")
                 logger.warning("Unable to decrypt event")
                 print(f"Event session ID {event.session_id}")
                 r = nio.crypto.OutgoingKeyRequest(event.session_id, None, None, None)
@@ -433,3 +434,49 @@ class MatrixBot:
         await self.start_global_plugins()
         await self.load_rooms()
         await self.listen()
+
+    async def get_private_room_with_user(self, user_id):
+        """
+        Finds an existing room with the given user.
+        If no room exists a new room is created with only the user and the bot
+        @return: the room id of the private room
+        """
+
+        # Find an exiting room with only user_id and bot.user_id
+        rooms = (await self.client.joined_rooms()).rooms
+        for room in rooms:
+            members = [
+                m.user_id for m in (await self.client.joined_members(room)).members
+            ]
+            if len(members) != 2:
+                continue
+            if sorted(members) == sorted([user_id, self.client.user_id]):
+                return room
+
+        logger.info(
+            f"No Common room with {user_id} found. Creating a new Matrix Room"
+        )
+
+        # Create a new room
+        create_response = await self.client.room_create(
+            is_direct=True,
+            preset=nio.RoomPreset.private_chat,
+            invite=[user_id],
+            initial_state=[
+                nio.event_builders.state_events.EnableEncryptionBuilder().as_dict(),
+                nio.event_builders.state_events.ChangeHistoryVisibilityBuilder("shared").as_dict(),
+            ],
+            power_level_override={"users_default":100},
+            #power_level_override={"users":{user_id:100}}, # This does not work as expected, maybe cause user_id hat not joined
+        )
+        room_id = create_response.room_id
+        logger.info(f"Created new Room with id {room_id}. Waiting for next sync")
+        # Wait for the next sync, until the new room is in our storage and we can send the message in the new room
+        await self.client.synced.wait()
+        logger.info("Synced")
+
+        # Add the new room to bernd managed rooms
+        mr = await MatrixRoom.new(self, self.client.rooms[room_id])
+        self.active_rooms.add(mr)
+
+        return room_id

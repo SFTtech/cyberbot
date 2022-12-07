@@ -76,7 +76,7 @@ Available subcommands:
         formatted_subcommands = format_help(subcommands)
         await plugin.send_html(formatted_subcommands, subcommands)
 
-    async def handle_new(invitor, args):
+    async def handle_new(event, args):
         def gen_random_token():
             # TODO: check for collisions
             chars = string.ascii_letters + string.digits
@@ -88,9 +88,14 @@ Available subcommands:
             return f"{url}{lim.im.path}/{token}/"
 
         token = gen_random_token()
+        try:
+            invitor = await plugin.get_sender_name(event)
+        except:
+            invitor = "Unknown Invitor"
         await lim.add_token(token, invitor)
 
-        await plugin.send_html(
+        print(f"invitor {invitor}")
+        await plugin.send_html_to_user(event.sender,
             "Send this link to the people you want to invite to this room: <br/><pre><code>"
             + await gen_url(token)
             + "</pre></code>"
@@ -107,7 +112,7 @@ Available subcommands:
 
     async def handle_list(args):
         html = (
-            "\n".join(f"{tokenid} - {token}" for (tokenid, token) in lim.tokens.items())
+                "\n".join(f"{tokenid} - ({token[0][:10] + '*'*22} - {token[1]})" for (tokenid, token) in lim.tokens.items())
             + "\n"
         )
         await plugin.send_html(format_help(html))
@@ -119,11 +124,7 @@ Available subcommands:
             await show_help()
         elif args[0] == "new":
             args.pop(0)
-            try:
-                invitor = await plugin.get_sender_name(event)
-            except:
-                invitor = "Unknown Invitor"
-            await handle_new(invitor, args)
+            await handle_new(event, args)
         elif args[0] == "rm":
             args.pop(0)
             await handle_rm(args)

@@ -131,7 +131,7 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
         formatted_subcommands = format_help(subcommands)
         await plugin.send_html(formatted_subcommands, subcommands)
 
-    async def handle_newhook(args):
+    async def handle_newhook(args, event):
         chars = string.ascii_letters + string.digits
         n = 16
         token = "".join(random.choice(chars) for i in range(n))
@@ -141,7 +141,7 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
         text = f"Successfully created token."
         await plugin.send_text(text)
         html = f"URL: {url}\ntoken: {token}\n"
-        await plugin.send_html(format_help(html))
+        await plugin.send_html_to_user(event.sender, format_help(html))
 
     async def handle_remhook(args):
         if not args:
@@ -201,7 +201,7 @@ See <a href="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html"
             await show_help()
         elif args[0] == "newhook":
             args.pop(0)
-            await handle_newhook(args)
+            await handle_newhook(args, event)
         elif args[0] == "remhook":
             args.pop(0)
             await handle_remhook(args)

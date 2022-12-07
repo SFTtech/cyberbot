@@ -10,7 +10,6 @@ import re
 from itertools import compress
 from pathlib import Path
 
-
 class Plugin:
     def __init__(self, mroom, pluginname):
         self.mroom = mroom
@@ -154,6 +153,77 @@ class Plugin:
             message_type="m.room.message",
             content={
                 "msgtype": "m.notice",
+                "body": txt,
+            },
+            ignore_unverified_devices=True,
+        )
+
+
+
+    async def _send_redirect_message(self, user_id):
+        """
+        Used in send_{text|html}_to_user to send an notice to look in the DMs for the response
+        """
+        await self.client.room_send(
+            room_id=self.nio_room.room_id,
+            message_type="m.room.message",
+            content={
+                "msgtype": "m.text",
+                "format": "org.matrix.custom.html",
+                "formatted_body": f"The response is confidential. {await self.format_user_highlight(user_id)} I'll send it to you in a private message",
+                "body": "",
+            },
+            ignore_unverified_devices=True,
+        )
+
+
+    async def send_text_to_user(self, user_id, txt):
+        await self.start_task(self.send_text_to_user_task(user_id, txt))
+
+    async def send_text_to_user_task(self, user_id, txt):
+        await self._send_redirect_message(user_id)
+        room_id = await self.bot.get_private_room_with_user(user_id)
+        await self.client.room_send(
+            room_id=room_id,
+            message_type="m.room.message",
+            content={
+                "msgtype": "m.text",
+                "body": f"Here is your private message from the room '{self.nio_room.display_name}'",
+            },
+            ignore_unverified_devices=True,
+        )
+        await self.client.room_send(
+            room_id=room_id,
+            message_type="m.room.message",
+            content={
+                "msgtype": "m.text",
+                "body": txt,
+            },
+            ignore_unverified_devices=True,
+        )
+
+    async def send_html_to_user(self, user_id, formatted_txt, txt=""):
+        await self.start_task(self.send_html_to_user_task(user_id, formatted_txt, txt))
+
+    async def send_html_to_user_task(self, user_id, formatted_txt, txt=""):
+        await self._send_redirect_message(user_id)
+        room_id = await self.bot.get_private_room_with_user(user_id)
+        await self.client.room_send(
+            room_id=room_id,
+            message_type="m.room.message",
+            content={
+                "msgtype": "m.text",
+                "body": f"Here is your private message from the room '{self.nio_room.display_name}'",
+            },
+            ignore_unverified_devices=True,
+        )
+        await self.client.room_send(
+            room_id=room_id,
+            message_type="m.room.message",
+            content={
+                "msgtype": "m.text",
+                "format": "org.matrix.custom.html",
+                "formatted_body": formatted_txt,
                 "body": txt,
             },
             ignore_unverified_devices=True,
