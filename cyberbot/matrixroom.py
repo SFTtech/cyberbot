@@ -13,8 +13,8 @@ nio.RoomMember.get_friendly_name = lambda self: self.display_name
 # every yield, return and await represents a point where control
 # flow can be interrupted.
 
-class MatrixRoom():
 
+class MatrixRoom:
     def __init__(self, matrixbot, nio_room):
         self.bot = matrixbot
         self.nio_room = nio_room
@@ -23,46 +23,47 @@ class MatrixRoom():
         self.plugins = []
         self.log = logging.getLogger(f"{__name__}.{self.room_id}")
 
-
     def __str__(self):
         return f"Matrix Room: {self.room_id}"
 
     async def load_plugins(self):
         self.log.info("Loading Plugins for Room")
         c = self.bot.conn.cursor()
-        r = c.execute("""
-        SELECT pluginname
-        FROM rooms JOIN room_plugins ON rooms.roomid == room_plugins.roomid
-        WHERE rooms.roomid=?;
-        """, (self.room_id,))
+        r = c.execute(
+            """
+            SELECT pluginname
+            FROM rooms JOIN room_plugins ON rooms.roomid == room_plugins.roomid
+            WHERE rooms.roomid=?;
+            """,
+            (self.room_id,),
+        )
 
         for (pname,) in r.fetchall():
             self.plugins.append(Plugin(self, pname))
 
         # load plugins
         results = await asyncio.gather(*(p.load() for p in self.plugins))
-        self.plugins = list(compress(self.plugins,results))
-
+        self.plugins = list(compress(self.plugins, results))
 
     async def handle_text_event(self, event):
-        results = await asyncio.gather(*(p.test_callback(event)
-            for p in self.plugins))
-        await asyncio.gather(*(p.handle_callback(event)
-            for p in compress(self.plugins,results)))
-
+        results = await asyncio.gather(*(p.test_callback(event) for p in self.plugins))
+        await asyncio.gather(
+            *(p.handle_callback(event) for p in compress(self.plugins, results))
+        )
 
     async def introduce_bot(self):
         try:
             self.log.info(f"Introducing myself to {self.room_id}")
             txt = f"""Hi, my name is {self.bot.botname}! I was just (re)started. Type !help to see my (new) capabilities."""
             await self.client.room_send(
-                    room_id=self.room_id,
-                    message_type="m.room.message",
-                    content={
-                        "msgtype": "m.text",
-                        "body": txt,
-                    },
-                    ignore_unverified_devices=True)
+                room_id=self.room_id,
+                message_type="m.room.message",
+                content={
+                    "msgtype": "m.text",
+                    "body": txt,
+                },
+                ignore_unverified_devices=True,
+            )
         except Exception as e:
             self.log.info(f"Exception: {e}")
 
@@ -74,12 +75,18 @@ class MatrixRoom():
         """
         c = bot.conn.cursor()
         # this is a "insert if not already exists"
-        r = c.execute("""
-        INSERT INTO rooms
-        SELECT (?)
-        WHERE NOT EXISTS (SELECT * FROM rooms
-                          WHERE roomid = ?);
-        """, (nio_room.room_id,nio_room.room_id,))
+        r = c.execute(
+            """
+            INSERT INTO rooms
+            SELECT (?)
+            WHERE NOT EXISTS
+                (SELECT * FROM rooms WHERE roomid = ?);
+            """,
+            (
+                nio_room.room_id,
+                nio_room.room_id,
+            ),
+        )
         bot.conn.commit()
 
         room = cls(bot, nio_room)
@@ -100,10 +107,13 @@ class MatrixRoom():
             self.log.warning(f"tried to load already loaded plugin {pluginname}")
             return
         c = self.bot.conn.cursor()
-        r = c.execute("""
-        INSERT INTO room_plugins(roomid,pluginname)
-        VALUES (?,?); 
-        """, (self.room_id, pluginname))
+        r = c.execute(
+            """
+            INSERT INTO room_plugins(roomid,pluginname)
+            VALUES (?,?);
+            """,
+            (self.room_id, pluginname),
+        )
         self.bot.conn.commit()
         self.log.info(f"Adding plugin {pluginname} to room")
         plugin = Plugin(self, pluginname)
@@ -116,12 +126,17 @@ class MatrixRoom():
         # no need for lock as only yielding point of control flow is await statement, which is last
         c = self.bot.conn.cursor()
         # we put this before the if block to be able to remove plugins that are left by accident
-        r = c.execute("""
-        DELETE FROM room_plugins
-        WHERE roomid=? AND pluginname=?;
-        """, (self.room_id, pluginname))
+        r = c.execute(
+            """
+            DELETE FROM room_plugins
+            WHERE roomid=? AND pluginname=?;
+            """,
+            (self.room_id, pluginname),
+        )
         self.bot.conn.commit()
-        indices = [i for (i,p) in enumerate(self.plugins) if p.pluginname==pluginname]
+        indices = [
+            i for (i, p) in enumerate(self.plugins) if p.pluginname == pluginname
+        ]
         if indices:
             p = self.plugins[indices[0]]
             del self.plugins[indices[0]]
