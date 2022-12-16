@@ -96,6 +96,10 @@ class MatrixBot:
             sys.path.append(path)
         sys.path.append(self.global_pluginpath)
 
+        self.allowed_rooms = [
+            r for r in botc.get("ROOM_WHITE_LIST", "").split(";") if r != ""
+        ]
+
     def get_global_plugin_object(self, name):
         i = self.global_plugin_names.index(name)
         return self.global_plugins[i].Object
@@ -229,6 +233,7 @@ class MatrixBot:
         )
         dbrooms = res.fetchall()
         for rid, nio_room in joined_rooms.items():
+            # self.allowed_rooms is ignored, because bernd can create rooms by himself
             if (rid,) in dbrooms:
                 mr = MatrixRoom(
                     matrixbot=self,
@@ -304,6 +309,11 @@ class MatrixBot:
             except:
                 logger.warning(f"Not joining room {room.room_id}")
                 return
+            if self.allowed_rooms and room.room_id not in self.allowed_rooms:
+                logger.info(
+                    f"Room {room.room_id} not in whitelist. Ignore invite event"
+                )
+                return
             if room.room_id not in jrooms:
                 logger.info(f"Try joining room {room.room_id}")
                 await asyncio.sleep(0.5)
@@ -370,7 +380,9 @@ class MatrixBot:
                 await handle_text_event(room, event)
             elif type(event) == nio.events.room_events.RoomMemberEvent:
                 name = event.source.get("sender")
-                logger.info(f"membership of {name} changed in room {room.room_id} from {event.prev_membership} to {event.membership}")
+                logger.info(
+                    f"membership of {name} changed in room {room.room_id} from {event.prev_membership} to {event.membership}"
+                )
             elif type(event) == nio.MegolmEvent:
                 logger.debug(f"account shared: {self.client.olm_account_shared}")
                 logger.warning("Unable to decrypt event")
@@ -453,9 +465,7 @@ class MatrixBot:
             if sorted(members) == sorted([user_id, self.client.user_id]):
                 return room
 
-        logger.info(
-            f"No Common room with {user_id} found. Creating a new Matrix Room"
-        )
+        logger.info(f"No Common room with {user_id} found. Creating a new Matrix Room")
 
         # Create a new room
         create_response = await self.client.room_create(
@@ -464,10 +474,12 @@ class MatrixBot:
             invite=[user_id],
             initial_state=[
                 nio.event_builders.state_events.EnableEncryptionBuilder().as_dict(),
-                nio.event_builders.state_events.ChangeHistoryVisibilityBuilder("shared").as_dict(),
+                nio.event_builders.state_events.ChangeHistoryVisibilityBuilder(
+                    "shared"
+                ).as_dict(),
             ],
-            power_level_override={"users_default":100},
-            #power_level_override={"users":{user_id:100}}, # This does not work as expected, maybe cause user_id hat not joined
+            power_level_override={"users_default": 100},
+            # power_level_override={"users":{user_id:100}}, # This does not work as expected, maybe cause user_id hat not joined
         )
         room_id = create_response.room_id
         logger.info(f"Created new Room with id {room_id}. Waiting for next sync")
