@@ -30,6 +30,7 @@ async def register_to(plugin):
     async def addplugin_callback(room, event):
         curr_plugins = [p.pluginname for p in plugin.mroom.plugins]
         args = event.source["content"]["body"].split()
+        plugin.log.info(f"Adding Plugins {args}")
         if len(args) > 1 and args[1] == "--all":
             await asyncio.gather(
                 *(
@@ -40,25 +41,16 @@ async def register_to(plugin):
             )
         else:
             await asyncio.gather(
-                *(
-                    plugin.mroom.add_plugin(pname)
-                    for pname in args[1:]
-                    if pname not in curr_plugins
-                )
+                *(plugin.mroom.add_plugin(pname) for pname in args[1:])
             )
-
-        await plugin.send_text("Call !help to see new plugins")
 
     addplugin_handler = plugin.CommandHandler("addplugin", addplugin_callback)
     plugin.add_handler(addplugin_handler)
 
     async def remplugin_callback(room, event):
         args = plugin.extract_args(event)
-
         torem = list(filter(lambda x: x not in blacklisted, args[1:]))
-
         await asyncio.gather(*(plugin.mroom.remove_plugin(pname) for pname in torem))
-        await plugin.send_text("Call !help to see new plugins")
 
     remplugin_handler = plugin.CommandHandler("remplugin", remplugin_callback)
     plugin.add_handler(remplugin_handler)

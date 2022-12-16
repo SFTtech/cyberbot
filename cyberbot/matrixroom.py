@@ -51,19 +51,22 @@ class MatrixRoom:
             *(p.handle_callback(event) for p in compress(self.plugins, results))
         )
 
+    async def send_text(self, txt):
+        await self.client.room_send(
+            room_id=self.room_id,
+            message_type="m.room.message",
+            content={
+                "msgtype": "m.text",
+                "body": txt,
+            },
+            ignore_unverified_devices=True,
+        )
+
     async def introduce_bot(self):
         try:
             self.log.info(f"Introducing myself to {self.room_id}")
             txt = f"""Hi, my name is {self.bot.botname}! I was just (re)started. Type !help to see my (new) capabilities."""
-            await self.client.room_send(
-                room_id=self.room_id,
-                message_type="m.room.message",
-                content={
-                    "msgtype": "m.text",
-                    "body": txt,
-                },
-                ignore_unverified_devices=True,
-            )
+            await self.send_text(txt)
         except Exception as e:
             self.log.info(f"Exception: {e}")
 
@@ -99,14 +102,17 @@ class MatrixRoom:
         return room
 
     async def add_plugin(self, pluginname):
-        # TODO show error in chat
+        self.log.info(f"Adding plugin {pluginname}")
         if not pluginname in self.bot.available_plugins:
             self.log.warning(f"tried to load invalid plugin {pluginname}")
+            await self.send_text(f"Plugin '{pluginname}' does not exists")
             return
         if pluginname in [p.pluginname for p in self.plugins]:
             self.log.warning(f"tried to load already loaded plugin {pluginname}")
+            await self.send_text(f"Plugin '{pluginname}' is already added to the room")
             return
         c = self.bot.conn.cursor()
+        self.log.info("Add New plugin to database")
         r = c.execute(
             """
             INSERT INTO room_plugins(roomid,pluginname)
@@ -120,6 +126,7 @@ class MatrixRoom:
         self.plugins.append(plugin)
         # this has to be the last statement to prevent race conditions
         await plugin.load()
+        await self.send_text(f"Added Plugin '{pluginname}'")
 
     async def remove_plugin(self, pluginname):
         self.log.info(f"Removing plugin {pluginname} from room")
@@ -141,3 +148,4 @@ class MatrixRoom:
             p = self.plugins[indices[0]]
             del self.plugins[indices[0]]
             await p.stop_all_tasks()
+        await self.send_text(f"Removed plugin '{pluginname}' from room")
