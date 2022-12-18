@@ -14,6 +14,7 @@ from matrixroom import MatrixRoom
 
 logger = logging.getLogger(__name__)
 
+
 class GitLabManager:
     def __init__(self):
         self.tokens = defaultdict(list)
@@ -25,7 +26,10 @@ class GitLabManager:
     async def set_bot(self, bot):
         self.bot = bot
         self.http_server = self.bot.get_global_plugin_object("http_server")
-        if "gitlab_manager" not in self.bot.config or "path" not in self.bot.config["gitlab_manager"]:
+        if (
+            "gitlab_manager" not in self.bot.config
+            or "path" not in self.bot.config["gitlab_manager"]
+        ):
             logger.error("gitlab_manager: invalid config file section")
             sys.exit(-1)
         self.config = self.bot.config["gitlab_manager"]
@@ -39,17 +43,17 @@ class GitLabManager:
             if request.method == "GET":
                 logger.info(f"Gitlab: Got GET request to webhook. Sending ooops page.")
                 text = """
-<html>
-    <head>
-        <title>Ooooooooooops</title>
-    </head>
+                    <html>
+                        <head>
+                            <title>Ooooooooooops</title>
+                        </head>
 
-    <body>
-        <p>Please don't open the url in your browser, but rather paste the url and the token into your page's gitlab webhook settings under Settings/Webhooks.</p>
-    </body>
-</html>
-"""
-                return web.Response(text=text, content_type='text/html')
+                        <body>
+                            <p>Please don't open the url in your browser, but rather paste the url and the token into your page's gitlab webhook settings under Settings/Webhooks.</p>
+                        </body>
+                    </html>
+                """
+                return web.Response(text=text, content_type="text/html")
 
             if request.path != self.path:
                 logger.info(f"Gitlab: ignoring request to wrong path: {request.path}")
@@ -77,13 +81,13 @@ class GitLabManager:
                     return web.Response(status=400)
 
                 await asyncio.gather(
-                    *(handler.handle(token, event, content) for handler in handlers))
+                    *(handler.handle(token, event, content) for handler in handlers)
+                )
                 return web.Response(text="OK")
             return web.Response(status=400)
 
-        
-        res = await self.http_server.register_path(self.path, handle_request) 
-        if (res == None):
+        res = await self.http_server.register_path(self.path, handle_request)
+        if res == None:
             print("Failed registering github_manager path to http_server")
 
     async def nexthookid(self):
@@ -107,6 +111,7 @@ class GitLabManager:
             if h[i][0] == hookid:
                 del h[i]
                 break
+
 
 logger.info("Creating GitLabManager")
 Object = GitLabManager()
