@@ -309,11 +309,14 @@ class MatrixBot:
             except:
                 logger.warning(f"Not joining room {room.room_id}")
                 return
+
             if self.allowed_rooms and room.room_id not in self.allowed_rooms:
                 logger.info(
-                    f"Room {room.room_id} not in whitelist. Ignore invite event"
+                    f"Room {room.room_id} not in whitelist. Reject invite event"
                 )
+                await self.client.room_leave(room.room_id)
                 return
+
             if room.room_id not in jrooms:
                 logger.info(f"Try joining room {room.room_id}")
                 await asyncio.sleep(0.5)
