@@ -86,15 +86,9 @@ class GitManager:
 
             if token in self.tokens:
                 handlers = [handler for (hid, handler) in self.tokens[token]]
-                c = await request.content.read()
-                with open("hookslog.txt", "ab+") as f:
-                    f.write(c)
                 try:
-                    jsondata = c.decode("utf-8")
-                    content = json.loads(jsondata)
-                except UnicodeDecodeError:
-                    return web.Response(status=400)
-                except:
+                    content = await request.json()
+                except web.HTTPBadRequest:
                     return web.Response(status=400)
 
                 await asyncio.gather(

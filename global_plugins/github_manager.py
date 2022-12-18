@@ -18,7 +18,7 @@ async def parse_request(request, tokens):
     # linearly in number of tokens and slow as we compute a hash until we find the token
     # also probably vulnerable to timing attacks. But at the moment I don't have a better idea
 
-    c = await request.content.read()
+    c = await request.read()
     for token in tokens:
         h = hmac.new(bytes(token, encoding="utf8"), c, "sha256")
         if hmac.compare_digest(h.hexdigest(), sig):
