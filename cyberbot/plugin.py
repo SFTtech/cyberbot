@@ -1,4 +1,3 @@
-import nio
 import asyncio
 import logging
 import importlib
@@ -6,6 +5,9 @@ import pathlib
 import shlex
 import traceback
 import re
+
+import imagesize
+import nio
 
 from itertools import compress
 from pathlib import Path
@@ -246,46 +248,53 @@ class Plugin:
         res = await self.client.update_room_topic(self.nio_room.room_id, description)
 
     async def send_image(self, filename):
+        try:
+            width, height = imagesize.get(filename)
+        except ValueError as e:
+            self.log.warning(f"Not sending image {filename} due to {e}")
+
         p = pathlib.Path(filename)
         extension = p.suffix.lower()[1:]
         if extension not in ["gif", "png", "jpg", "jpeg"]:
-            raise Exception(f"Unsupported image format: {extension}")
+            self.log.warning(f"Unsupported image format: {extension}")
+
         mime = "image/{}".format(extension.replace("jpeg", "jpg"))
-        uresp, fdi = await self.client.upload(
+        uresp, file_decryption_info = await self.client.upload(
             lambda x, y: filename,
             content_type=mime,
             filename=p.name,
+            filesize=p.stat().st_size,
             encrypt=self.nio_room.encrypted,
         )
-        if not type(uresp) == nio.UploadResponse:
-            print("Unable to upload image")
-        else:
-            # TODO: add preview
-            uri = uresp.content_uri
-            c = {
-                "msgtype": "m.image",
-                "body": p.name,
-                "info": {"mimetype": mime},  # can be extended
-            }
+        if type(uresp) == nio.UploadError:
+            self.log.warning(f"Failed to upload image {filename}: {uresp.message}")
+            return
 
-            if self.nio_room.encrypted:
-                c["mimetype"] = mime
-                if fdi:
-                    fdi["url"] = uri
-                    fdi["mimetype"] = mime
-                    c["file"] = fdi
-                else:
-                    c["file"] = {"url": uri, "mimetype": mime}
-                # print(fdi)
-            else:
-                c["url"] = uri
+        uri = uresp.content_uri
+        c = {
+            "msgtype": "m.image",
+            "body": p.name,
+            "url": uri,
+            "info": {
+                "mimetype": mime,
+                "h": height,
+                "w": width,
+                "size": p.stat().st_size,
+            },
+        }
 
-            await self.client.room_send(
-                room_id=self.nio_room.room_id,
-                message_type="m.room.message",
-                content=c,
-                ignore_unverified_devices=True,
-            )
+        if self.nio_room.encrypted and file_decryption_info:
+            c["file"] = file_decryption_info
+            c["file"]["url"] = uri
+
+        self.log.info(c)
+
+        await self.client.room_send(
+            room_id=self.nio_room.room_id,
+            message_type="m.room.message",
+            content=c,
+            ignore_unverified_devices=True,
+        )
 
     # =============================================
     # Plugin helper functions (key-value-store)

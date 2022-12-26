@@ -3,3 +3,4 @@ pathlib
 matrix-nio[e2e]
 aiohttp
 requests
+imagesize
