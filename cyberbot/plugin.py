@@ -252,11 +252,13 @@ class Plugin:
             width, height = imagesize.get(filename)
         except ValueError as e:
             self.log.warning(f"Not sending image {filename} due to {e}")
+            return
 
         p = pathlib.Path(filename)
         extension = p.suffix.lower()[1:]
         if extension not in ["gif", "png", "jpg", "jpeg"]:
             self.log.warning(f"Unsupported image format: {extension}")
+            return
 
         mime = "image/{}".format(extension.replace("jpeg", "jpg"))
         uresp, file_decryption_info = await self.client.upload(
@@ -286,8 +288,6 @@ class Plugin:
         if self.nio_room.encrypted and file_decryption_info:
             c["file"] = file_decryption_info
             c["file"]["url"] = uri
-
-        self.log.info(c)
 
         await self.client.room_send(
             room_id=self.nio_room.room_id,
