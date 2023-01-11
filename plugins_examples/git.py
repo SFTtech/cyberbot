@@ -9,6 +9,7 @@ from collections import defaultdict
 from matrixroom import MatrixRoom
 
 DEFAULTCONFIG = {
+    "verbose": False,
     "emoji": True,
     "notification": True,
 }
@@ -80,14 +81,12 @@ class LocalHookManager:
         called by GitManager when a hook event occurs
         """
         self.plugin.log.info(f"Token event received: {event}")
-        if "config" in await self.plugin.kvstore_get_local_keys():
-            config = json.loads(await self.plugin.kvstore_get_local_value("config"))
-        else:
-            config = DEFAULTCONFIG
+        s_config = await self.plugin.kvstore_get_local_value("config")
+        config = DEFAULTCONFIG | (json.loads(s_config or "{}"))
         text = self.format_event(
             event,
             content,
-            verbose=False,
+            verbose=config["verbose"],
             emojis=config["emoji"],
             asnotice=config["notification"],
         )
@@ -157,12 +156,8 @@ class LocalHookManager:
 
         async def handle_config(args):
             # setup default config
-            if "config" not in await self.plugin.kvstore_get_local_keys():
-                await self.plugin.kvstore_set_local_value(
-                    "config", json.dumps(DEFAULTCONFIG)
-                )
-
-            config = json.loads(await self.plugin.kvstore_get_local_value("config"))
+            s_config = await self.plugin.kvstore_get_local_value("config")
+            config = DEFAULTCONFIG | (json.loads(s_config or "{}"))
             if len(args) == 0:
                 await self.plugin.send_html(
                     format_code(
