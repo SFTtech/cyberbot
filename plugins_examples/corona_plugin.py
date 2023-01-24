@@ -1,40 +1,25 @@
 import json
 import requests
+import tempfile
 
 
-HELP_DESC = "!corona\t\t\t-\tShow Coronavirus stats\n"
+HELP_DESC = "!corona\t\t\t-\tShow Coronavirus stats of Germany\n"
 
-# TODO fix json decode error
-
-
-def get_stats():
-    url = "https://rki-covid-api.now.sh/api/states"
-    r = requests.get(url)
-    j = json.loads(r.text)
-    return j
-
+DOWNLOAD_URL = "https://api.corona-zahlen.org/map/districts-legend"
 
 async def register_to(plugin):
 
-    # async def get_corona_stats()
-
     async def corona_callback(room, event):
-        states = get_stats()["states"]
-        fields = states[0].keys()
-        html = """<table>
-                    <tr>
-                """
-        for field in fields:
-            html += f"<th>{field}</th>\n"
-        html += "</tr>\n"
+        r = requests.get(DOWNLOAD_URL)
 
-        for state in states:
-            html += "<tr>\n"
-            for field in fields:
-                html += f"<td>{state[field]}</td>"
-            html += "</tr>\n"
-        html += "</table>"
-        await plugin.send_html(html)
+        if r:
+            with tempfile.NamedTemporaryFile("wb", suffix=".png") as t:
+                t.write(r.content)
+                print(t.name)
+                await plugin.send_image(t.name)
+        else:
+            await plugin.send_text('Corona ' + DOWNLOAD_URL + ' unavailable :( ')
+
 
     # Add a command handler waiting for the corona command
     corona_handler = plugin.CommandHandler("corona", corona_callback)
