@@ -209,9 +209,3 @@ class LocalHookManager:
         await self.load_tokens()
         git_handler = self.plugin.CommandHandler(self.git, git_callback)
         self.plugin.add_handler(git_handler)
-
-
-# TODO use the not yet implemented register_destructor
-async def destructor(plugin):
-    self.git_manager.tokens = defaultdict(list)
-    self.git_manager.currenthid = 0

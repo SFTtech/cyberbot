@@ -17,7 +17,7 @@ from plugin import Plugin
 import nio
 
 DEFAULT_BOTNAME = "Matrix Bot"
-DEFAULT_PLUGINPATH = ["./plugins"]
+DEFAULT_PLUGINPATHS = ["./plugins"]
 DEFAULT_DEVICEID = "MATRIXBOT"
 DEFAULT_DBPATH = "./matrixbot.sqlite"
 DEFAULT_BIND_ADDRESS = "localhost"
@@ -70,9 +70,15 @@ class MatrixBot:
 
         self.dbpath = botc.get("DBPATH", DEFAULT_DBPATH)
         self.load_db(self.dbpath)
-        self.pluginpath = [
-            p.strip() for p in botc.get("PLUGINPATH", DEFAULT_PLUGINPATH).split(";")
-        ]
+
+        custom_pluginpaths = botc.get("PLUGINPATHS")
+        if custom_pluginpaths:
+            self.pluginpaths = [
+                p.strip() for p in custom_pluginpaths.split(";")
+            ]
+        else:
+            self.pluginpaths = DEFAULT_PLUGINPATHS
+
         self.environment = dict(
             (k.upper(), v) for k, v in dict(botc).items() if k.lower() != "password"
         )
@@ -117,12 +123,12 @@ class MatrixBot:
         logger.info("Logging Bot in")
         hname = socket.gethostname()
         response = await self.client.login(self.password, device_name=hname)
-        if type(response) == nio.LoginError:
+        if type(response) is nio.LoginError:
             logger.error(
                 "There was an error while logging in. Please check credentials"
             )
             sys.exit(-1)
-        k = await self.client.sync()  # otherwise all past messages will be handled
+        await self.client.sync()  # otherwise all past messages will be handled
         self.last_sync_time = time.time()
         if self.client.should_upload_keys:
             await self.client.keys_upload()
@@ -222,7 +228,7 @@ class MatrixBot:
             )
 
     async def load_rooms(self):
-        logger.info("Loading Roomns")
+        logger.info("Loading Rooms")
         joined_rooms = self.client.rooms
         cursor = self.conn.cursor()
         res = cursor.execute(
@@ -246,8 +252,6 @@ class MatrixBot:
         plugin_paths = [Path(path) for path in self.pluginpath]
         logger.info(f"Reading available plugins from: {plugin_paths}")
 
-        help_module = None
-
         for i in range(len(self.global_plugin_names)):
             modname = self.global_plugin_names[i]
             filename = Path(self.global_pluginpath) / f"{modname}.py"
@@ -257,8 +261,9 @@ class MatrixBot:
                 try:
                     module = loader.load_module(modname)
                     self.global_plugins[i] = module
-                except Exception as e:
+                except Exception:
                     logger.error(f"Failed to Load global plugin {modname}")
+                    logger.exception()
 
         # plugins must be called ...plugin.py, so other modules in the same
         # directory are not falsely loaded (allows for plugin decomposition)
@@ -306,8 +311,9 @@ class MatrixBot:
             try:
                 jrooms = await self.client.joined_rooms()
                 jrooms = jrooms.rooms
-            except:
+            except Exception:
                 logger.warning(f"Not joining room {room.room_id}")
+                logger.exception()
                 return
 
             if self.allowed_rooms and room.room_id not in self.allowed_rooms:
@@ -368,8 +374,6 @@ class MatrixBot:
 
         async def event_cb(room, *args):
             event = args[0]
-            logger.debug(80 * "=")
-            # pprint(vars(event))
             if room.room_id in self.client.rooms:
                 logger.debug(
                     f"{type(event)} in room {self.client.rooms[room.room_id].display_name})"
@@ -377,16 +381,16 @@ class MatrixBot:
             else:
                 logger.debug(type(event), "in room", room.room_id)
 
-            if type(event) == nio.events.invite_events.InviteMemberEvent:
+            if type(event) is nio.events.invite_events.InviteMemberEvent:
                 await handle_invite_event(room, event)
-            elif type(event) == nio.events.room_events.RoomMessageText:
+            elif type(event) is nio.events.room_events.RoomMessageText:
                 await handle_text_event(room, event)
-            elif type(event) == nio.events.room_events.RoomMemberEvent:
+            elif type(event) is nio.events.room_events.RoomMemberEvent:
                 name = event.source.get("sender")
                 logger.info(
                     f"membership of {name} changed in room {room.room_id} from {event.prev_membership} to {event.membership}"
                 )
-            elif type(event) == nio.MegolmEvent:
+            elif type(event) is nio.MegolmEvent:
                 logger.debug(f"account shared: {self.client.olm_account_shared}")
                 logger.warning("Unable to decrypt event")
                 print(f"Event session ID {event.session_id}")
@@ -394,12 +398,12 @@ class MatrixBot:
                 self.client.store.remove_outgoing_key_request(r)
                 if event.session_id in self.client.olm.outgoing_key_requests.keys():
                     del self.client.olm.outgoing_key_requests[event.session_id]
-                res = await self.client.request_room_key(
+                await self.client.request_room_key(
                     event
                 )  # should do updating by itself
                 # event_cb(room, event)
             else:
-                logger.debug("Ignoring unknown type event")
+                logger.debug(f"Ignoring unknown type event: {event!r}")
 
         async def response_cb(response):
             logger.debug("Got response")

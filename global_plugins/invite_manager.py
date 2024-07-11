@@ -1,5 +1,4 @@
 import logging
-import asyncio
 import nio
 from aiohttp import web
 
@@ -22,7 +21,7 @@ class InviteManager:
             or "path" not in self.bot.config["invite_manager"]
         ):
             logger.error("invite_manager: invalid config file section")
-            sys.exit(-1)
+            exit(-1)
         self.config = self.bot.config["invite_manager"]
 
         p = self.config["path"]

@@ -30,7 +30,7 @@ class Plugin:
     async def load(self):
         filename = self.pluginname + "_plugin.py"
         full_plugin_path = None
-        self.log.info(f"Loading ...")
+        self.log.info("Loading ...")
         for path in self.bot.pluginpath:
             p = Path(path).resolve()
             if (p / filename).exists():
@@ -104,7 +104,7 @@ class Plugin:
         """
 
         def __init__(self, commandstring, handle_callback):
-            super().__init__(r"^!" + commandstring + "(\s.*)?$", handle_callback)
+            super().__init__(r"^!" + commandstring + r"(\s.*)?$", handle_callback)
 
     # =============================================
     # Plugin helper functions (room)
