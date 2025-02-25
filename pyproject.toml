@@ -1,0 +1,65 @@
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[project]
+name = "cyberbot"
+version = "0.1.0"
+license = { file = "LICENSE" }
+maintainers = [
+    { name = "Jonas Jelten", email = "jj@sft.lol" },
+    { name = "Leo Fahrbach", email = "leo@sft.lol" },
+]
+readme = "README.md"
+classifiers = [
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT",
+]
+
+# 3.12 for sqlite autocommit; argparse exit_on_error cpython#121018
+requires-python = ">=3.12.5"
+
+dependencies = [
+    "matrix-nio[e2e]",
+    "aiohttp",
+    "imagesize",
+    "pydantic >= 2.0, < 3.0",
+    "PyYAML",
+]
+
+[project.urls]
+Source = "https://github.com/SFTtech/cyberbot"
+
+[project.scripts]
+compass = "cyberbot.main:main"
+
+
+[tool.pdm.dev-dependencies]
+lint = [
+    "isort",
+    "mypy",
+    "pyflakes",
+    "pytest",
+    "pylsp-mypy",
+    "python-lsp-ruff",
+    "ruff",
+]
+
+[tool.pdm.scripts]
+cyberbot = {call = "cyberbot.main:main"}
+
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["I", "F", "E", "PL"]
+ignore = ["PLR0913", "E722"]
+
+[tool.mypy]
+ignore_missing_imports = true
+check_untyped_defs = true
+pretty = true
+plugins = ["pydantic.mypy"]

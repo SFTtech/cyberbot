@@ -1,0 +1,40 @@
+storage:
+  database_path: "bot.db"
+  cryptostate_path: "crystore/"
+
+matrix:
+  user: '@user:server.lol'
+  password: null
+  homeserver: https://matrix.server.lol
+  deviceid: null
+
+load_modules:
+  - /srv/botplugins/worlddomination.py
+  - /srv/botplugins/somepythonpackage
+
+config:
+  http_server:
+    bind_address: localhost
+    bind_port: 8081
+    base_url: http://localhost:8081
+
+  github_server:
+    webhook_path: /webhook-github
+  gitlab_server:
+    webhook_path: /webhook-gitlab
+  invite_manager:
+    invite_path: /invite
+
+bot:
+  # matrix display name
+  name: Bernd
+
+  # Allows which room the bot can join if invited.
+  # If the list is empty, all rooms are allowed to be join.
+  rooms_allowed:
+    - '!room:server.tld'
+    - '!other_room:server.tld'
+
+  # Allows to manage the bot and invite it to any room.
+  admins:
+    - '@you:lol.rofl'
