@@ -290,6 +290,7 @@ class Room:
         self._log.info(f"Loading plugin {pluginname}...")
         ok = await self._load_plugin(pluginname)
         if ok:
+            await self._modules[pluginname].init()
             self._bot.db.write(
                 """
                 insert into room_plugins(roomid, pluginname)
