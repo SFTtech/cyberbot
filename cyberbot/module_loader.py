@@ -20,7 +20,7 @@ def load_modules(extra_module_locations: list[str]) -> dict[str, ModuleType]:
     for module_location in extra_module_locations:
         module_path = Path(module_location)
         if not module_path.exists():
-            raise ValueError(r"failed to load extra module from {module_location!r}")
+            raise ValueError(f"failed to load extra module from {module_location!r}")
 
         module_name = module_path.stem
         mod_package_name = f"cyberbot.modules.{module_name}"

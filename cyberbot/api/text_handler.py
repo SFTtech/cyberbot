@@ -47,8 +47,7 @@ class RegexHandler(TextHandler):
         if event.source["type"] == "m.room.message":
             text = event.source["content"]["body"]
 
-            if ((self._pre_check and self._pre_check(text)) and
-                self._re.match(text)):
+            if ((self._pre_check is None or self._pre_check(text)) and self._re.match(text)):
                 await self._action(event)
 
 
