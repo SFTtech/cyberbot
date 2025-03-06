@@ -184,8 +184,18 @@ class RoomAPI:
 
     async def create_room(self, creator: str,
                           name: str,
-                          topic: str | None = None) -> Room:
-        return await self._bot.rooms.create_room(creator=creator, name=name, topic=topic)
+                          topic: str | None = None,
+                          preset: str | None = None) -> Room:
+        """
+        create a new room.
+        type_preset: "public", "private"
+        """
+        return await self._bot.rooms.create_room(
+            creator=creator,
+            name=name,
+            topic=topic,
+            preset=preset,
+        )
 
     # service management
     def get_service(self, service_name: str) -> Service:

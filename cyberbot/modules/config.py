@@ -90,6 +90,7 @@ class Config(RoomPlugin):
 
         #-- room create
         create_cli = room_sp.add_parser("create")
+        create_cli.add_argument("--preset", choices=["public", "private", "trusted_private"], default="public")
         create_cli.add_argument("title", nargs="+")
 
         #-- room invite
@@ -259,7 +260,7 @@ class Config(RoomPlugin):
 
             case "create":
                 title = " ".join(args.title)
-                new_room = await self._api.create_room(creator=issuer.user_id, name=title)
+                new_room = await self._api.create_room(creator=issuer.user_id, name=title, preset=args.preset)
                 await self._set_selected_target_room(issuer, new_room.room_id)
                 return
 
