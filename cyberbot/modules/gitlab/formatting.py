@@ -1,583 +1,477 @@
-import random
-from collections import namedtuple
+from __future__ import annotations
 
-# TODO: escape html
+import textwrap
+import typing
+
+from pydantic import BaseModel
+
+from ..util.git_formatter import PR as BasePR
+from ..util.git_formatter import Commit as BaseCommit
+from ..util.git_formatter import GitEventFormatter, GitFormatter
+from ..util.git_formatter import Ref as BaseRef
+from ..util.git_formatter import Repo as BaseRepo
+from ..util.git_formatter import User as BaseUser
+from ..util.git_formatter import WorkItem as BaseWorkItem
+
+if typing.TYPE_CHECKING:
+    from typing import Any
 
 
-User = namedtuple("User", ["ID", "name", "username", "email", "avatar_url"])
-Project = namedtuple("Project", ["ID", "name", "description", "web_url"])
+class User(BaseModel):
+    id: int
+    name: str
+    username: str
+    email: str
+    avatar_url: str
+
+    def to_base(self) -> BaseUser:
+        return BaseUser(name=self.name, login=self.username, url=None)
 
 
-class Formatter:
-    def __init__(self, event, content, verbose=False, emojis=True, asnotice=True):
+class UserFlat(BaseModel):
+    """
+    some events (e.g. push) have the userinfo in the toplevel json object.
+    """
+    user_id: int
+    user_name: str
+    user_username: str
+    user_email: str
+    user_avatar: str
+
+    def to_base(self) -> BaseUser:
+        return BaseUser(name=self.user_name, login=self.user_username, url=None)
+
+    def to_user(self) -> User:
+        return User(id=self.user_id, name=self.user_name, username=self.user_username,
+                    email=self.user_email, avatar_url=self.user_avatar)
+
+
+class Project(BaseModel):  # aka Repository
+    id: int
+    name: str
+    description: str
+    web_url: str
+
+    def to_base(self) -> BaseRepo:
+        return BaseRepo(name=self.name, url=self.web_url)
+
+
+class MergeRequest(BaseModel):
+    iid: int
+    title: str
+    state: str
+    url: str | None
+    work_in_progress: bool
+    draft: bool
+
+    def to_base(self) -> BasePR:
+        return BasePR(number=self.iid, title=self.title, url=self.url, state=self.state)
+
+
+class WorkItem(BaseModel):
+    iid: int
+    title: str
+    description: str
+    url: str
+
+    def to_base(self) -> BaseWorkItem:
+        return BaseWorkItem(number=self.iid, title=self.title, url=self.url)
+
+
+class CodeSnippet(BaseModel):
+    title: str
+    url: str
+    file_name: str
+
+
+class CommitUser(BaseModel):
+    name: str
+    email: str
+
+    def to_base(self) -> BaseUser:
+        return BaseUser(name=self.name, login=None, url=None)
+
+
+class Commit(BaseModel):
+    id: int
+    message: str
+    title: str
+    timestamp: str
+    url: str
+    author: CommitUser
+    added: list[str]
+    modified: list[str]
+    removed: list[str]
+
+    def to_base(self) -> BaseCommit:
+        return BaseCommit(author=self.author.to_base(), id=self.id, title=self.title, url=self.url)
+
+
+class Pipeline(BaseModel):
+    name: str
+    source: str
+    url: str
+    status: str
+    stages: list[str]
+
+
+class Job(BaseModel):
+    name: str
+    status: str
+    stage: str | None
+
+
+class Vulnerability(BaseModel):
+    url: str
+    title: str
+    severity: str
+    state: str
+
+
+class GitLabEventFormatter(GitEventFormatter):
+    def __init__(self, event: str, content: dict[str, Any], config: dict[str, bool]) -> None:
         self.event = event
         self.content = content
-        self.set_formatting_options(verbose, emojis, asnotice)
 
-    def set_formatting_options(
-        self,
-        verbose=False,
-        emojis=True,
-        asnotice=True,
-    ):
-        self.verbose = verbose
-        self.emojis = emojis
-        self.asnotice = asnotice
+        self.verbose = config["verbose"]
 
-    # =============
-    # FORMATTING
-    # ============
+        super().__init__(
+            main_emoji="🦊",
+            emojis=config["emoji"],
+        )
 
-    def format(self):
-        """
-        return html representation of event with formatting options
-        """
-        if self.emojis:
-            # animals = "🐶🐺🦊🦝🐱🐱🦁🐯"
-            animals = "🦊"
-            animal = random.choice(animals)
-            return f"{animal} {self.format_content()}"
-        else:
-            return f"{self.format_content()}"
+    # content extraction
+    def _get_user(self) -> User:
+        if sender_raw := self.content.get("user"):
+            return User(**sender_raw)
+        elif self.content.get("user_username"):
+            return UserFlat(**self.content).to_user()
 
-    def format_content(self):
-        pass
+        raise ValueError("'user'/'user_username' missing from content")
 
-    def format_link(self, url, linktext):
-        return f"<a href='{url}'>{linktext}</a>"
+    def _get_project(self) -> Project:
+        if project_raw := self.content.get("project"):
+            return Project(**project_raw)
 
-    def format_user(self, user):
-        """
-        Ignore user.username and user.avatar for now
-        """
-        res = f"{user.name}"
-        if user.email and self.verbose:
-            link = self.format_link(f"mailto:{user.email}", user.email)
-            res += f"({link})"
-        return res
+        raise ValueError("'project' missing from content")
 
-    def format_project(self, project):
-        """
-        even in a verbose output, we probably do not want to see the description
-        """
-        if project.web_url:
-            res = self.format_link(project.web_url, project.name)
-        else:
-            res = f"{project.name}"
-        return res
+    def _fmt_repo_action(self, action: str) -> str:
+        return self._format_repo_action(
+            repo=self._get_project().to_base(),
+            user=self._get_user().to_base(),
+            action=action,
+        )
 
-    def format_text_block(self, text, cut=True):
-        if cut and text.count("\n") > 3:
-            res = "\n".join(text.split("\n")[:3])
-            res += "..."
-        else:
-            res = text
-        return f"<pre><code>{res}</code></pre>"
+    def _fmt_repo_event(self, event: str) -> str:
+        return self._format_repo_event(
+            repo=self._get_project().to_base(),
+            event=event,
+        )
 
-    def get_verb_passive(self, action):
-        """
-        So far I have seen the following verbs: open, reopen, close, update, approve
-        """
-        # opened and reopened need an ed th the end
-        if action == "did something unknown to":
-            return action
-        elif action.endswith("ed"):
+    def _get_verb_passive(self, action: str) -> str:
+        if action.endswith("ed"):
             return action
         elif action.endswith("e"):
-            return action + "d"
+            return f"{action}d"
         else:
-            return action + "ed"
-
-    # =============
-    # PARSING
-    # ============
-    defaultuser = User(ID="", name="", username="", email="", avatar_url="")
-    defaultproject = Project(ID="", name="", description="", web_url="")
-
-    def get_user_from_dict(self, userdict):
-        self.defaultuser = User(ID="", name="", username="", email="", avatar_url="")
-        return User(
-            ID=userdict.get("id", self.defaultuser.ID),
-            name=userdict.get("name", self.defaultuser.name),
-            username=userdict.get("username", self.defaultuser.username),
-            email=userdict.get("email", self.defaultuser.email),
-            avatar_url=self.content.get("avatar_url", self.defaultuser.avatar_url),
-        )
-
-    def get_main_user(self):
-        """
-        In most cases, there is a user key in the root json which contains the
-        information. Sometimes it's a little bit more ugly than that and this
-        method has to be overriden
-        """
-        if "user" not in self.content:
-            return self.defaultuser
-        userdict = self.content["user"]
-        return self.get_user_from_dict(userdict)
-
-    def get_project(self):
-        if "project" not in self.content:
-            return self.defaultproject
-        projectdict = self.content["project"]
-        return Project(
-            ID=projectdict.get("id", self.defaultproject.ID),
-            name=projectdict.get("name", self.defaultproject.name),
-            description=projectdict.get("description", self.defaultproject.description),
-            web_url=projectdict.get("web_url", self.defaultproject.web_url),
-        )
+            return f"{action}ed"
 
 
-class OtherUserFormatter(Formatter):
+class PushFormatter(GitLabEventFormatter):
     """
-    Push and Tag Push events have a different way to specifiy the user
-    Job Event doesn't contain a user
+    https://docs.gitlab.com/user/project/integrations/webhook_events/#push-events
     """
+    def _fmt_commits(self, max_commits: int = 3):
+        commits_raw = self.content.get("commits", [])
 
-    def get_main_user(self):
-        return User(
-            ID=self.content.get("user_id", self.defaultuser.ID),
-            name=self.content.get("user_name", self.defaultuser.name),
-            username=self.content.get("user_username", self.defaultuser.username),
-            email=self.content.get("user_email", self.defaultuser.email),
-            avatar_url=self.content.get("user_avatar", self.defaultuser.avatar_url),
-        )
+        commits: list[BaseCommit] = []
+        for commit in commits_raw:
+            commits.append(Commit(**commit).to_base())
 
+        return self._format_commits(commits, max_commits=max_commits)
 
-class PushFormatter(OtherUserFormatter):
+    def _get_content(self) -> str | None:
+        ref = self.content["ref"]
+        fmt_ref = self._format_ref(BaseRef(ref=ref, ref_type="branch"))
 
-    commitattrs = [
-        "ID",
-        "message",
-        "title",
-        "timestamp",
-        "url",
-        "author",
-        "added",
-        "modified",
-        "removed",
-    ]
-    Commit = namedtuple("Commit", commitattrs)
+        # there seems to be no before-after comparison web url
+        fmt = self._fmt_repo_action(f"pushed {fmt_ref}")
 
-    defaultcommit = Commit(
-        ID="",
-        message="",
-        title="",
-        timestamp="",
-        url="",
-        author=Formatter.defaultuser,
-        added="",
-        modified="",
-        removed="",
-    )
-
-    def format_branch(self, branchname):
-        if self.emojis:
-            return f"🌿 {branchname}"
-        else:
-            return f"branch {branchname}"
-
-    def format_commit(self, commit, href=True, branch=False):
         if self.verbose:
-            fmt_message = self.format_text_block(commit.message, cut=True)
-            if href and commit.url != "":
-                fmt = f"{commit.title} ({self.format_link(commit.url,commit.ID[:7])})</br>{fmt_message}"
-            else:
-                fmt = f"{commit.title} ({commit.ID[0:7]})</br>{fmt_message}"
-        elif href and commit.url != "":
-            fmt = f"{commit.title} ({self.format_link(commit.url,commit.ID[:7])})"
-        else:
-            fmt = f"{commit.title} ({commit.ID[0:7]})"
-        if branch:
-            fmt = "⇨ " + fmt
+            fmt += self._fmt_commits()
         return fmt
 
-    def format_commits(self, commits):
-        """
-        Maybe only print last commit for non verbose?
-        """
-        return "\n".join(
-            f"<li>{self.format_commit(commit, branch=(i==0))}</li>"
-            for (i, commit) in enumerate(commits)
-        )
 
-    def get_branch(self):
-        ref = self.content.get("ref", "")
-        return ref.split("/")[-1]
-
-    def commit_from_dict(self, commit):
-        attrs = {}
-        for attr in self.commitattrs:
-            if attr == "author" and "author" in commit:
-                attrs["author"] = self.get_user_from_dict(commit["author"])
-            else:
-                attrs[attr] = commit.get(
-                    attr.lower(), getattr(self.defaultcommit, attr)
-                )
-        return PushFormatter.Commit(**attrs)
-
-    def get_commits(self):
-        commitdicts = self.content.get("commits", [])
-        commits = []
-        for commit in commitdicts:
-            commits.append(self.commit_from_dict(commit))
-        commits.reverse()
-        return commits
-
-    def format_content(self):
-        project = self.get_project()
-        fmt_project = self.format_project(project)
-        user = self.get_main_user()
-        fmt_user = self.format_user(user)
-        branch = self.get_branch()
-        fmt_branch = self.format_branch(branch)
-        commits = self.get_commits()
-        fmt_commits = self.format_commits(commits)
-
-        return (
-            f"{fmt_user} pushed to {fmt_branch} of {fmt_project}:<ul>{fmt_commits}</ul>"
-        )
-
-
-class TagPushFormatter(OtherUserFormatter):
-    def format_tag(self, tagname):
-        if self.emojis:
-            return f"tag 🏷️{tagname}"
-        else:
-            return f"tag {tagname}"
-
-    def get_tag(self):
-        ref = self.content.get("ref", "")
-        return ref.split("/")[-1]
-
-    def get_verb_preposition(self):
-        zeroes = "0000000000000000000000000000000000000000"
-        after = self.content.get("after", "")
-        before = self.content.get("before", "")
+class TagPushFormatter(GitLabEventFormatter):
+    """
+    https://docs.gitlab.com/user/project/integrations/webhook_events/#tag-events
+    """
+    def _get_action(self):
+        zeroes = "0" * 40
+        after = self.content["after"]
+        before = self.content["before"]
         if after == zeroes:
-            return "deleted", "from"
+            return "deleted"
         elif before == zeroes:
-            return "pushed new", "to"
+            return "pushed new"
         else:
-            return "changed", "in"
+            return "changed"
 
-    def format_content(self):
-        """
-        I do not think a distinction has to be made here between verbosity
-        levels
-        """
-        project = self.get_project()
-        fmt_project = self.format_project(project)
-        user = self.get_main_user()
-        fmt_user = self.format_user(user)
-        tag = self.get_tag()
-        fmt_tag = self.format_tag(tag)
-        verb, preposition = self.get_verb_preposition()
+    def _get_content(self) -> str | None:
+        tag = BaseRef(ref=self.content["ref"], ref_type="tag")
+        fmt_tag = self._format_ref(tag)
+        verb = self._get_action()
 
-        return f"{fmt_user} {verb} remote {fmt_tag} {preposition} {fmt_project}"
+        return self._fmt_repo_action(f"{verb} {fmt_tag}")
 
 
-class IssueFormatter(Formatter):
-    def format_issue(self, oas, href=True):
-        url = oas.get("url", "")
-        IID = oas.get("iid", "")
-        if IID:
-            IID = "#" + str(IID)
-        title = oas.get("title", "Unknown Title")
-        res = f"{IID} {title}"
-        if url and href:
-            return self.format_link(url, res)
-        else:
-            return res
+class WorkItemFormatter(GitLabEventFormatter):
+    """
+    https://docs.gitlab.com/user/project/integrations/webhook_events/#work-item-events
+    """
+    def _get_content(self) -> str | None:
+        oas = self.content["object_attributes"]
+        objtype = oas["type"].lower()
+        action = oas["action"]
 
-    def format_content(self):
-        project = self.get_project()
-        fmt_project = self.format_project(project)
-        user = self.get_main_user()
-        fmt_user = self.format_user(user)
+        item = f"new {objtype}" if action == "open" else objtype
+        verb = self._get_verb_passive(action)
+        fmt_work_item = self._format_workitem_title(WorkItem(**oas).to_base())
+        fmt = self._fmt_repo_action(f"{verb} {item} {fmt_work_item}")
 
-        oas = self.content.get("object_attributes", {})
-        action = oas.get("action", "did something unknown to")
+        if not self.verbose:
+            return fmt
 
-        verb = self.get_verb_passive(action)
-        new = "new issue" if action == "open" else "issue"
-        fmt_issue = self.format_issue(oas)
+        match action:
+            case "opened":
+                description = oas.get("description", "").strip()
+                if description:
+                    fmt += f":\n{self._format_text_block(description)}"
+            case _:
+                pass
 
-        if self.verbose:
-            pass  # TODO: add more information
-        fmt = f"{fmt_user} {verb} {new} {fmt_issue} in {fmt_project}"
-        if action == "open":
-            description = oas.get("description", "")
-            if description is not None and description.strip() != "":
-                shortendescr = True
-                if shortendescr:
-                    fmt_description = description
-                else:
-                    if description.count("\n") > 3:
-                        fmt_description = "\n".join(description.split("\n")[:3])
-                    fmt_description += "..."
-                fmt += f":<br/><pre><code>{fmt_description}</pre></code>"
         return fmt
 
 
-class NoteFormatter(Formatter):
+class CommentFormatter(GitLabEventFormatter):
     """
-    four types of comments: commit, merge request, issue, code snippet
     https://docs.gitlab.com/ee/user/project/integrations/webhooks.html#comment-events
+    four types of comments: commit, merge request, issue, code snippet
     """
 
-    def format_target(self, oas):
-        if "noteable_type" not in oas:
-            return "Received invalid Comment Type (no noteable_type field in object_attributes)"
+    def _format_target(self, oas) -> str:
         comment_type = oas["noteable_type"]
-        comment_url = oas.get("url", "https://example.com")
-        if comment_type == "Issue":
-            comment_target = IssueFormatter(
-                self.event, self.content, self.verbose, self.emojis, self.asnotice
-            ).format_issue(self.content.get("issue", {}), href=False)
-            fmt_comment_target = self.format_link(comment_url, comment_target)
-        elif comment_type == "Snippet":
-            snips = self.content.get("snippet", {})
-            snippet_title = snips.get("title", "")
-            snippet_content = snips.get("content", "")
-            snippet_fname = snips.get("file_name", "")
-            comment_target = f"{snippet_title} ({snippet_fname})"
-            fmt_comment_target = "snippet " + self.format_link(
-                comment_url, comment_target
-            )
-        elif comment_type == "Commit":
-            pf = PushFormatter(
-                self.event, self.content, self.verbose, self.emojis, self.asnotice
-            )
-            commit = pf.commit_from_dict(self.content.get("commit", {}))
-            comment_target = pf.format_commit(commit, href=False)
-            fmt_comment_target = self.format_link(comment_url, comment_target)
-            print(fmt_comment_target)
-        elif comment_type == "MergeRequest":
-            mr = self.content.get("merge_request", {})
-            comment_target = MergeFormatter.format_mr(mr, href=False)
-            fmt_comment_target = self.format_link(comment_url, comment_target)
-        else:
-            fmt_comment_target = f"Unknown Commen Target {comment_type}"
-        return fmt_comment_target
+        comment_url = oas["url"]
 
-    def format_content(self):
-        shortendescr = True
-        user = self.get_main_user()
-        fmt_user = self.format_user(user)
-        project = self.get_project()
-        fmt_project = self.format_project(project)
+        match comment_type:
+            case "Issue":
+                issue = WorkItem(**self.content["issue"])
+                item = self._format_workitem_nr(issue.to_base(), href=False)
+                return self._format_link(comment_url, f"issue {item}")
 
-        oas = self.content.get("object_attributes", {})
+            case "MergeRequest":
+                mr = MergeRequest(**self.content["merge_request"])
+                item = self._format_workitem_nr(mr.to_base(), href=False)
+                return self._format_link(comment_url, f"merge request {item}")
 
-        fmt_target = self.format_target(oas)
-        note = oas.get("note", "")
-        fmt_note = self.format_text_block(note, cut=(not self.verbose))
+            case "Snippet":
+                snip = CodeSnippet(**self.content["snippet"])
+                return self._format_link(
+                    snip.url, f"snippet {textwrap.shorten(snip.title, width=60)} ({snip.file_name})"
+                )
 
-        return f"{fmt_user} commented on {fmt_target} in {fmt_project}:<br/>{fmt_note}"
+            case "Commit":
+                commit = Commit(**self.content["commit"])
+                cmsg = commit.message[:commit.message.index('\n')]
+                return self._format_link(
+                    commit.url, f"commit {textwrap.shorten(cmsg, width=60)}"
+                )
+
+            case _:
+                return f"{comment_type.lower()}"
+
+    def _get_content(self) -> str | None:
+        oas = self.content["object_attributes"]
+
+        fmt_target = self._format_target(oas)
+
+        ret = self._fmt_repo_action(f"commented on {fmt_target}")
+
+        if self.verbose:
+            fmt_note = self._format_text_block(oas["note"])
+            return f":\n{fmt_note}"
+
+        return ret
 
 
-class MergeFormatter(Formatter):
-    def format_mr(oas, href=True):
-        iid = oas.get("iid", "")
-        url = oas.get("url", "")
-        source = oas.get("source", {})
-        target = oas.get("target", {})
+class MergeFormatter(GitLabEventFormatter):
+    def _get_content(self) -> str | None:
 
-        source_p = source.get("path_with_namespace", "")
-        source_branch = oas.get("source_branch", "")
-        target_p = target.get("path_with_namespace", "")
-        target_branch = oas.get("target_branch", "")
-        if source_p == target_p:
-            fmt_mr = (
-                f"Merge Request !{iid} from branch {source_branch} to {target_branch}"
-            )
-        else:
-            fmt_mr = f"Merge Request !{iid} from {source_p}/{source_branch} to {target_p}/{target_branch}"
-        if href and url != "":
-            return f"<a href='{url}'>{fmt_mr}</a>"
-        else:
-            return fmt_mr
+        oas = self.content["object_attributes"]
 
-    def format_content(self):
-        shortendescr = True
+        action = oas["action"]
+        verb = self._get_verb_passive(action)
 
-        user = self.get_main_user()
-        fmt_user = self.format_user(user)
+        mr = MergeRequest(**oas)
 
-        project = self.get_project()
-        fmt_project = self.format_project(project)
-
-        oas = self.content.get("object_attributes", {})
-
-        fmt_mr = MergeFormatter.format_mr(oas)
-
-        action = oas.get("action", "did something unknown to")
-        verb = self.get_verb_passive(action)
-
-        description = oas.get("description", "")
-        if shortendescr:
-            fmt_description = description
-        elif description.count("\n") > 3:
-            fmt_description = "\n".join(description.split("\n")[:3])
-            fmt_description += "..."
-
-        # if self.verbose and action == "open":
         if action == "open":
-            return f"{fmt_user} {verb} {fmt_mr} in {fmt_project}:<br/><pre><code>{fmt_description}</pre></code>"
-        else:
-            return f"{fmt_user} {verb} {fmt_mr} in {fmt_project}"
+            fmt_mr = self._format_pr_title(mr.to_base())
+            return self._fmt_repo_action(f"{verb} merge request {fmt_mr}")
+
+        fmt_mrid = self._format_workitem_nr(mr.to_base())
+        fmt_action = self._fmt_repo_action(f"{verb} merge request {fmt_mrid}")
+
+        match action:
+            case "open":
+                raise Exception("handled earlier")
+            case "reopen":
+                return fmt_action
+            case "merge":
+                return self._format_state(fmt_action, state="success")
+            case "close":
+                return self._format_state(fmt_action, state="fail")
+            case _:
+                # "update" | "approve" | "approval" | "unapproved" | "unapproval", ...
+                if self.verbose:
+                    return fmt_action
+
+        return None
 
 
-class WikiFormatter(Formatter):
-    def get_verb_passive(self, action):
-        """
-        So far I have seen the following verbs: create, update, delete
-        """
-        # opened and reopened need an ed th the end
-        if action == "did something unknown to":
-            return action
-        else:
-            return action + "d"
+class WikiFormatter(GitLabEventFormatter):
+    def _fmt_wiki_page(self, oas: dict) -> str:
+        title = oas["title"]
 
-    def format_wiki_page(self, oas, href=True):
-        url = oas.get("url", "")
-        title = oas.get("title", "")
-        fmt = f"Wiki Page <code>{title}</code>"
-        if href and url != "":
-            return self.format_link(url, fmt)
+        fmt = f"wiki page <code>{textwrap.shorten(title, width=50)}</code>"
+        if url := oas.get("url"):
+            return self._format_link(url, fmt)
         else:
             return fmt
 
-    def format_content(self):
-        shortendescr = True
+    def _get_content(self) -> str | None:
+        oas = self.content["object_attributes"]
 
-        user = self.get_main_user()
-        fmt_user = self.format_user(user)
+        fmt_wiki = self._fmt_wiki_page(oas)
 
-        project = self.get_project()
-        fmt_project = self.format_project(project)
+        action = oas["action"]
+        verb = self._get_verb_passive(action)
 
-        oas = self.content.get("object_attributes", {})
-        fmt_wiki = self.format_wiki_page(oas)
-
-        action = oas.get("action", "did something unknown to")
-        verb = self.get_verb_passive(action)
-
-        return f"{fmt_user} {verb} {fmt_wiki} in {fmt_project}"
+        return self._fmt_repo_action(f"{verb} {fmt_wiki}")
 
 
-class PipelineFormatter(Formatter):
+class BuildEventFormatter(GitLabEventFormatter):
     """
-    TODO: add hyperlinks
+    common stuff for PipelineFormatter and JobFormatter
     """
 
-    emojidict = {
-        "success": "✅",
-        "fail": "❌",
-        "skipped": "➡️",
-        "created": "⬆️",
-    }
-
-    def format_build(self, builddict):
-        name = builddict.get("name", "build")
-        stage = builddict.get("stage", "")
-        if stage != "":
+    def _format_job(self, job: Job):
+        if stage := job.stage:
             stage = f"({stage})"
-        status = builddict.get("status", "unknown status")
-        if self.emojis:
-            emoji = self.emojidict.get(status, "")
-            if emoji != "":
-                emoji = f"{emoji} "
-            return f"{emoji}{name}{stage}: <code>{status}</code>"
         else:
-            return f"{name}{stage}: <code>{status}</code>"
+            stage = ""
 
-    def format_pipeline(self, oas):
-        status = oas.get("status", "Unknown Status")
-        stages = oas.get("stages", [])
-        ref = oas.get("ref", "")
-        pid = oas.get("id", "")
-        source = oas.get("source")
-        if self.emojis:
-            statusemoji = self.emojidict.get(status, "")
-        return f"Pipeline {pid} triggered by {source} exited with status {statusemoji}<code>{status}</code>"
-
-    def format_content(self):
-        # user = self.get_main_user()
-        # fmt_user = self.format_user(user)
-
-        project = self.get_project()
-        fmt_project = self.format_project(project)
-
-        oas = self.content.get("object_attributes", {})
-        fmt_pipeline = self.format_pipeline(oas)
-
-        base = f"{fmt_pipeline} in {fmt_project}"
-        if self.verbose:
-            base += "\n<ul>"
-            for build in self.content.get("builds", []):
-                base += "\n<li>"
-                base += self.format_build(build)
-                base += "</li>"
-            base += "\n</ul>"
-            return base
-        else:
-            return base
+        return self._format_state(f"{job.name}{stage}: <code>{job.status}</code>", state=job.status)
 
 
-class JobFormatter(Formatter):
-    emojidict = {
-        "success": "✅",
-        "fail": "❌",
-        "skipped": "➡️",
-        "created": "⬆️",
-    }
-
-    def format_project(self):
-        name = self.content.get("project_name", "")
-        url = self.content.get("repository", {}).get("homepage", "")
-        return self.format_link(url, name)
-
-    def format_build(self):
-        name = self.content.get("build_name", "build")
-        stage = self.content.get("build_stage", "")
-        if stage != "":
-            stage = f"({stage})"
-        status = self.content.get("build_status", "unknown status")
-        if self.emojis:
-            emoji = self.emojidict.get(status, "")
-            if emoji != "":
-                emoji = f"{emoji} "
-            return f"{emoji}{name}{stage}: <code>{status}</code>"
-        else:
-            return f"{name}{stage}: <code>{status}</code>"
-
-    def format_content(self):
-        fmt_project = self.format_project()
-        fmt_build = self.format_build()
-
-        base = f"Job Event: {fmt_build} in {fmt_project}"
-        return base
-
-
-def format_event(event, content, verbose=False, emojis=True, asnotice=True):
+class PipelineFormatter(BuildEventFormatter):
     """
-    TODO: change verbose to a verbosity level with multiple (>2) options
-    returns None if event shouldn't be printed
+    https://docs.gitlab.com/user/project/integrations/webhook_events/#pipeline-events
     """
-    formatters = {
-        "Push Hook": PushFormatter,
-        "Tag Push Hook": TagPushFormatter,
-        "Issue Hook": IssueFormatter,
-        "Note Hook": NoteFormatter,
-        "Merge Request Hook": MergeFormatter,
-        "Wiki Page Hook": WikiFormatter,
-        "Pipeline Hook": PipelineFormatter,
-        "Job Hook": JobFormatter,
-    }
 
-    if event in formatters:
-        return formatters[event](event, content, verbose, emojis, asnotice).format()
-    elif "Confidential" in event:
+    def _format_pipeline(self, pipeline: Pipeline):
+        fmt_pl = self._format_link(pipeline.url, f"pipeline {textwrap.shorten(pipeline.name, 40)}")
+        fmt = f"{fmt_pl}: <code>{pipeline.status}</code>"
+        return self._format_state(fmt, state=pipeline.status)
+
+    def _get_content(self) -> str | None:
+        pipeline = Pipeline(**self.content["object_attributes"])
+
+        if pipeline.status not in {"fail", "success"} and not self.verbose:
+            return None
+
+        fmt_pipeline = self._format_pipeline(pipeline)
+        fmt = self._fmt_repo_event(fmt_pipeline)
+
+        if not self.verbose:
+            return fmt
+
+        builds: list[str] = list()
+
+        for job in self.content.get("builds", []):
+            builds.append(f"<li>{self._format_job(Job(**job))}</li>")
+
+        if builds:
+            fmt += f":\\n<ul>{'\\n'.join(builds)}</ul>"
+
+        return fmt
+
+
+class JobFormatter(BuildEventFormatter):
+    """
+    https://docs.gitlab.com/user/project/integrations/webhook_events/#job-events
+    """
+    def _get_content(self) -> str | None:
+        job = Job(
+            name=self.content["build_name"],
+            stage=self.content["build_stage"],
+            status=self.content["build_status"],
+        )
+        fmt_job = self._format_job(job)
+
+        return self._fmt_repo_event(f"job {fmt_job}")
+
+
+class VulnerabilityFormatter(GitLabEventFormatter):
+    """
+    https://docs.gitlab.com/user/project/integrations/webhook_events/#vulnerability-events
+    """
+    def _get_content(self) -> str | None:
+        vuln = Vulnerability(**self.content["object_attributes"])
+
+        fmt_title = f"{textwrap.shorten(vuln.title, 80)!r}"
+        fmt_link = self._format_link(vuln.url, f"vulnerability {fmt_title}")
+        fmt_vuln = self._format_state(f"{vuln.severity} {fmt_link}: <code>{vuln.state}</code>", vuln.state)
+        return self._fmt_repo_event(fmt_vuln)
+
+
+class GitLabFormatter(GitFormatter):
+    def format(
+        self,
+        event: str,
+        content: Any,
+        config: dict[str, bool]
+    ) -> str | None:
+        """
+        returns None if event shouldn't be printed
+        """
+
+        # https://docs.gitlab.com/user/project/integrations/webhook_events/
+        formatters: dict[str, type[GitLabEventFormatter]] = {
+            "Push Hook": PushFormatter,
+            "Tag Push Hook": TagPushFormatter,
+            "Issue Hook": WorkItemFormatter,
+            "Note Hook": CommentFormatter,
+            "Merge Request Hook": MergeFormatter,
+            "Wiki Page Hook": WikiFormatter,
+            "Pipeline Hook": PipelineFormatter,
+            "Job Hook": JobFormatter,
+            "Vulnerability Hook": VulnerabilityFormatter,
+        }
+
+        if formatter := formatters.get(event):
+            return formatter(event, content, config).format()
+
+        elif "Confidential" in event:
+            return None
+
+        elif config["verbose"]:
+            return f"GitLab event received: {event!r}."
+
         return None
-    return f"Unknown event received: {event}. Please poke the maintainers."
+
+    def get_config(self) -> dict[str, bool]:
+        return {
+            "verbose": False,
+            "emoji": True,
+            "notice": True,
+        }

@@ -1,10 +1,15 @@
-from argparse import ArgumentParser
+from __future__ import annotations
+
+import typing
 
 from cyberbot.api.room_api import RoomAPI
 from cyberbot.api.room_plugin import PluginConfigParser, RoomPlugin
 
 from ..util.git_hook_handler import GitHookHandler
-from .formatting import format_event
+from .formatting import GitLabFormatter
+
+if typing.TYPE_CHECKING:
+    from argparse import ArgumentParser
 
 
 class GitLab(RoomPlugin):
@@ -12,9 +17,8 @@ class GitLab(RoomPlugin):
         self._handler = GitHookHandler(
             api,
             git_variant="gitlab",
-            format_event_func=format_event,
+            formatter=GitLabFormatter(),
             info_url="https://docs.gitlab.com/ee/user/project/integrations/webhooks.html",
-            emoji="🦊",
         )
 
     @classmethod
@@ -25,7 +29,7 @@ class GitLab(RoomPlugin):
         return self._handler.config_setup(parser)
 
     async def init(self):
-        await self._handler.start()
+        await self._handler.init()
 
 
 Module = GitLab

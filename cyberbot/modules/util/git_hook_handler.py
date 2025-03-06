@@ -12,15 +12,12 @@ from pydantic import BaseModel
 from cyberbot.api.room_api import RoomAPI
 from cyberbot.service.base.git_hook_server import BaseGitHookHandler, GitHookServer
 
+from .git_formatter import GitFormatter
+
 if typing.TYPE_CHECKING:
-    from typing import Any, Callable
+    from typing import Any
 
-    from cyberbot.api.room_plugin import PluginConfigParser
-
-
-# def format_event(event: str, content: Any(the webhook json body),
-#                  config: dict[str, bool]) -> str | None
-type EventFormatter = Callable[[str, Any, dict[str, bool]], str | None]
+    from ...api.room_plugin import PluginConfigParser
 
 
 class _WebHook(BaseModel):
@@ -41,9 +38,8 @@ class GitHookHandler(BaseGitHookHandler):
         self,
         api: RoomAPI,
         git_variant: str,
-        format_event_func: EventFormatter,
+        formatter: GitFormatter,
         info_url: str,
-        emoji: str,
         new_hook_message: str = "",
     ):
         """
@@ -60,9 +56,8 @@ class GitHookHandler(BaseGitHookHandler):
         self._git_variant = git_variant
         self._store_key_hook = f"{self._git_variant}_hooks"
 
-        self._format_event: EventFormatter = format_event_func
+        self._formatter: GitFormatter = formatter
         self._info_url = info_url
-        self._emoji = emoji
         self._new_hook_message = new_hook_message
 
     def config_setup(self, parser: ArgumentParser) -> PluginConfigParser | None:
@@ -131,7 +126,7 @@ class GitHookHandler(BaseGitHookHandler):
         self._add_hook(hook)
         await self._store_hooks()
 
-        url = f"{self._git_hook_server.base_url}/{subpath}"
+        url = await self._git_hook_server.format_url(subpath)
 
         await config_api.send_text("WebHook created successfully:")
         html = f"Payload URL: {url}\nSecret: {secret}\n{self._new_hook_message}"
@@ -182,14 +177,14 @@ class GitHookHandler(BaseGitHookHandler):
 
     async def _help(self, config_api: RoomAPI):
         help_text = textwrap.dedent(f"""\
-        !{self._git_variant} [subcommand] [option1 option2 ...]
+        room config {self._git_variant} <subcommand> [options...]
         Available subcommands:
             hook list               - show active webhooks
             hook new                - generate url and secrettoken for a new webhook
             hook rm                 - remove a webhook
             config                  - change the way that notifications are printed
 
-        How does it work? {self._emoji}
+        How does it work?
             You first create a new secret token for a hook using the 'newhook' command.
             Then open your {self._git_variant} repo (or group) page and navigate to 'Settings>Webhooks'.
             There, you enter the url and secret token returned by the 'newtoken'
@@ -220,14 +215,10 @@ class GitHookHandler(BaseGitHookHandler):
         await self._api.send_text(f"set {key!r} to {config[key]}")
 
     async def _get_config(self) -> dict[str, bool]:
-        defaults = {
-            "verbose": False,
-            "emoji": True,
-            "notice": True,
-        }
+        custom_config_raw = (await self._api.storage.get("config")) or "{}"
+        custom_config = json.loads(custom_config_raw)
 
-        s_config = (await self._api.storage.get("config")) or "{}"
-        config = defaults | json.loads(s_config)
+        config = self._formatter.get_config() | custom_config
         return config
 
     async def handle_git_hook(self, subpath: str, event: str, content: Any) -> None:
@@ -237,7 +228,7 @@ class GitHookHandler(BaseGitHookHandler):
         self._api.log.info(f"Token event received: {event}")
 
         config = await self._get_config()
-        text = self._format_event(
+        text = self._formatter.format(
             event,
             content,
             config,

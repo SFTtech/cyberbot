@@ -1,10 +1,15 @@
-from argparse import ArgumentParser
+from __future__ import annotations
+
+import typing
 
 from cyberbot.api.room_api import RoomAPI
 from cyberbot.api.room_plugin import PluginConfigParser, RoomPlugin
 
 from ..util.git_hook_handler import GitHookHandler
-from .formatting import format_event
+from .formatting import GitHubFormatter
+
+if typing.TYPE_CHECKING:
+    from argparse import ArgumentParser
 
 
 class GitHub(RoomPlugin):
@@ -12,9 +17,8 @@ class GitHub(RoomPlugin):
         self._handler = GitHookHandler(
             api,
             git_variant="github",
-            format_event_func=format_event,
+            formatter=GitHubFormatter(),
             info_url="https://docs.github.com/webhooks/",
-            emoji="🐱",
             new_hook_message="IMPORTANT: Select content type: application/json\n",
         )
 
