@@ -358,8 +358,8 @@ class PushFormatter(GitHubEventFormatter):
     def _get_content(self) -> str | None:
         fmt_ref = self._fmt_ref()
 
-        fmt_push = self._format_link(self.content["compare"], "pushed")
-        fmt = self._fmt_repo_action(f"{fmt_push} {fmt_ref}")
+        fmt_reflink = self._format_link(self.content["compare"], fmt_ref)
+        fmt = self._fmt_repo_action(f"pushed {fmt_reflink}")
 
         if self.verbose:
             fmt += self._fmt_commits()
