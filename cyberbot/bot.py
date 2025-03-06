@@ -55,16 +55,16 @@ class Bot:
         self._last_sync_time = 0.0
         self._available_plugins: dict[str, type[RoomPlugin]] = dict()
 
+        self._event_tasks: set[asyncio.Task] = set()
+
         # TODO maybe allow selective disabling.
         # the module can depend on another when .setup() is called in _start_services()
         self._services: dict[str, Service] = {
-            "http_server": http_server.HTTPServer(),
-            "gitlab_hook_server": gitlab.GitLabServer(),
-            "github_hook_server": github.GitHubServer(),
-            "invite_manager": invite_manager.InviteManager(),
+            "http_server": http_server.HTTPServer(self),
+            "gitlab_hook_server": gitlab.GitLabServer(self),
+            "github_hook_server": github.GitHubServer(self),
+            "invite_manager": invite_manager.InviteManager(self),
         }
-
-        self._event_tasks: set[asyncio.Task] = set()
 
     def get_plugins(self) -> dict[str, type[RoomPlugin]]:
         return self._available_plugins
@@ -95,7 +95,7 @@ class Bot:
     async def _start_services(self):
         logger.info("starting global plugins...")
         for service in self._services.values():
-            await service.setup(self)
+            await service.setup()
             await service.start()
 
     async def _initial_sync(self, test=False):

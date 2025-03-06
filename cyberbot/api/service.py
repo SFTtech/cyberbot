@@ -8,8 +8,11 @@ if TYPE_CHECKING:
 
 
 class Service(ABC):
+    def __init__(self, bot: Bot) -> None:
+        self._bot = bot
+
     @abstractmethod
-    async def setup(self, bot: Bot):
+    async def setup(self):
         """
         initialization of this service module
         """
