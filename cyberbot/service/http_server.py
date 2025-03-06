@@ -8,35 +8,39 @@ from aiohttp import web
 from ..api.service import Service
 
 if TYPE_CHECKING:
-    from ...bot import Bot
+    from ..bot import Bot
 
 logger = logging.getLogger(__name__)
 
 
-type RequestHandler = Callable[[web.BaseRequest], Awaitable[web.StreamResponse | None]]
+type RequestHandler = Callable[[str, web.BaseRequest], Awaitable[web.StreamResponse | None]]
 
 
 class HTTPServer(Service):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, bot: Bot) -> None:
+        super().__init__(bot)
 
         self._bind_address = ""
         self._bind_port = 0
         self._base_url = ""
         self._paths: dict[str, RequestHandler] = {}
-        self._bot: Bot | None = None
 
-    async def setup(self, bot: Bot) -> None:
-        self._bot = bot
+    async def setup(self) -> None:
         config = self._bot.get_config("http_server")
         if not config:
             raise Exception("http_server: config section missing")
 
         self._bind_address = config["bind_address"]
         self._bind_port = int(config["bind_port"])
-        self._base_url = config["base_url"]
-        if not self._base_url:
+        base_url = config.get("base_url")
+        if not base_url:
             raise ValueError("please set http_server.base_url to a valid url prefix")
+        self._base_url = base_url.rstrip("/")
+
+        await self.register_path("/", self._index_page)
+
+    async def _index_page(self, subpath: str, req: web.BaseRequest) -> web.StreamResponse:
+        return web.Response(text=f"{self._bot.botname} is running here!")
 
     async def start(self) -> None:
         # we have to use the low level server instead of web.Application
@@ -55,10 +59,12 @@ class HTTPServer(Service):
         Returns if the path was registered successfully.
         """
 
-        if not path_prefix.startswith("/"):
-            raise Exception("registered path must start with /")
+        path_prefix = path_prefix.lstrip("/").rstrip("/")
+        if "/" in path_prefix:
+            # we just support top-level routing for now.
+            raise ValueError("no middle / allowed in http server path registration for subpaths")
 
-        logger.info(f"Registering http server path {path_prefix!r}")
+        logger.info(f"Registering http server path /{path_prefix}")
 
         if path_prefix in self._paths:
             return False
@@ -77,16 +83,17 @@ class HTTPServer(Service):
 
     async def _handle_request(self, request: web.BaseRequest) -> web.StreamResponse:
         path_parts = request.path.split("/", maxsplit=2)
-        prefix_path = f"/{path_parts[1]}"
+        prefix_path = path_parts[1]
 
         if handler := self._paths.get(prefix_path):
-            res: web.StreamResponse | None = await handler(request)
+            subpath = path_parts[2] if len(path_parts) >= 3 else ""
+            res: web.StreamResponse | None = await handler(subpath, request)
             if res is None:
                 return web.Response(status=200)
             return res
 
         else:
-            return web.Response(status=302, headers={"Location": "/index.html"})
+            return web.Response(status=404, text=f"path {prefix_path!r} not found")
 
     async def get_url(self):
         return self._base_url

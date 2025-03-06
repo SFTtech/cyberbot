@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import hmac
 import hashlib
+from typing import TYPE_CHECKING
 
 from aiohttp import web
 
 from .base.git_hook_server import GitHookServer
 from ..types import Err, Ok, Result
+
+if TYPE_CHECKING:
+    from ..bot import Bot
 
 
 def verify_signature(body: bytes, secret_token: str, signature_header: str) -> bool:
@@ -22,8 +26,8 @@ def verify_signature(body: bytes, secret_token: str, signature_header: str) -> b
 
 
 class GitHubServer(GitHookServer):
-    def __init__(self):
-        super().__init__("github")
+    def __init__(self, bot: Bot):
+        super().__init__(bot, "github")
 
     async def _check_request(self, request: web.BaseRequest, secret: str) -> Result[str, str]:
 

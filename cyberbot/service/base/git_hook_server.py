@@ -35,18 +35,17 @@ class _GitHookHandle:
 
 
 class GitHookServer(Service):
-    def __init__(self, git_variant: str):
-        super().__init__()
+    def __init__(self, bot: Bot, git_variant: str):
+        super().__init__(bot)
 
         # {hook subpath -> _GitHookHandler}
         self._handles: dict[str, _GitHookHandle] = dict()
-        self._bot: Bot | None = None
         self._http_server: HTTPServer | None = None
 
         self._git_variant = git_variant
         self._path: str = ""
 
-        self.base_url: str = ""
+        self._base_url: str = ""
 
     @abstractmethod
     async def _check_request(self, request: web.BaseRequest, secret: str) -> Result[str, str]:
@@ -57,8 +56,7 @@ class GitHookServer(Service):
         """
         pass
 
-    async def setup(self, bot: Bot):
-        self._bot = bot
+    async def setup(self):
         self._http_server = typing.cast(
             HTTPServer,
             self._bot.get_service("http_server")
@@ -68,11 +66,20 @@ class GitHookServer(Service):
         if config is None:
             raise ValueError(f"[{self._git_variant}_server] not found in config")
 
-        self._path = config["webhook_path"]
-        if not self._path.startswith("/"):
-            raise ValueError(f"[{self._git_variant}_server] webhook_path must start with /")
+        path = config["webhook_path"]
 
-        self.base_url = f"{await self._http_server.get_url()}{self._path}"
+        # ensure single surrounding /path/
+        self._path = f"/{path.lstrip('/').rstrip('/')}/"
+
+    async def format_url(self, subpath: str) -> str:
+        """
+        return hook server url for a subpath.
+        _base_url ends in /
+        """
+        if self._http_server is None:
+            raise Exception("http server not yet set up")
+
+        return f"{await self._http_server.get_url()}{self._path}{subpath}"
 
     async def start(self):
         if not self._http_server:
@@ -97,10 +104,7 @@ class GitHookServer(Service):
     async def deregister_hook(self, webhook_subpath: str):
         del self._handles[webhook_subpath]
 
-    async def _handle_request(self, request: web.BaseRequest) -> web.StreamResponse:
-        if not request.path.startswith(self._path):
-            raise Exception(f"GitHookServer got request to {request.path}, but requires prefix={self._path}")
-
+    async def _handle_request(self, subpath: str, request: web.BaseRequest) -> web.StreamResponse:
         match request.method:
             case "GET":
                 text = textwrap.dedent(f"""\
@@ -125,8 +129,6 @@ class GitHookServer(Service):
             case _:
                 return web.Response(text="unsupported method", status=404)
 
-        subpath = request.path.removeprefix(self._path)
-
         handle = self._handles.get(subpath)
 
         if not handle:
@@ -150,4 +152,4 @@ class GitHookServer(Service):
         except TimeoutError:
             return web.Response(text="timeout", status=501)
 
-        return web.Response(status=400)
+        return web.Response(status=200)

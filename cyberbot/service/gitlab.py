@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 import hmac
+from typing import TYPE_CHECKING
 
 from aiohttp import web
 
 from ..types import Err, Ok, Result
 from .base.git_hook_server import GitHookServer
 
+if TYPE_CHECKING:
+    from ..bot import Bot
+
 
 class GitLabServer(GitHookServer):
-    def __init__(self):
-        super().__init__("gitlab")
+    def __init__(self, bot: Bot):
+        super().__init__(bot, "gitlab")
 
     async def _check_request(self, request: web.BaseRequest, secret: str) -> Result[str, str]:
 

@@ -116,7 +116,7 @@ class RoomTracker:
         topic: str | None = None,
         invite: list[str] = [],
         is_direct: bool = False,
-        preset: nio.RoomPreset | None = nio.RoomPreset.private_chat,
+        preset: str | None = None,
         initial_state: list[dict[Any, Any]] = [],
         predecessor: dict[str, Any] | None = None,
         space: bool = False,
@@ -135,6 +135,12 @@ class RoomTracker:
 
         returns: Room with already-called setup()
         """
+
+        room_preset: nio.RoomPreset | None = {
+            "public": nio.RoomPreset.public_chat,   # unencrypted, public join
+            "private": nio.RoomPreset.public_chat,  # encrypted, invite only
+            "trusted_private": nio.RoomPreset.trusted_private_chat,  # encrypted, invite only, all level 100
+        }[preset or "public"]  # default: public
 
         client = self._bot.mxclient
 
@@ -159,7 +165,7 @@ class RoomTracker:
             topic=topic,
             invite=invite,
             is_direct=is_direct,
-            preset=preset,
+            preset=room_preset,
             initial_state=initial_state_events,
             predecessor=predecessor,
             space=space,
