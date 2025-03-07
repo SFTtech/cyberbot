@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import textwrap
 import typing
 from abc import ABC, abstractmethod
@@ -17,9 +16,6 @@ if typing.TYPE_CHECKING:
     from typing import Any
 
     from ...bot import Bot
-
-
-logger = logging.getLogger(__name__)
 
 
 class BaseGitHookHandler(ABC):
@@ -79,15 +75,13 @@ class GitHookServer(Service):
         if self._http_server is None:
             raise Exception("http server not yet set up")
 
-        return f"{await self._http_server.get_url()}{self._path}{subpath}"
+        return await self._http_server.format_url(f"{self._path}{subpath}")
 
     async def start(self):
         if not self._http_server:
             raise Exception("http server is not setup yet")
 
-        res = await self._http_server.register_path(self._path, self._handle_request)
-        if res is None:
-            raise Exception(f"Failed registering {self._git_variant}_server webhook_path {self._path} to http_server")
+        await self._http_server.register_path(self._path, self._handle_request)
 
     def register_hook(self, webhook_subpath: str, secret: str, handler: BaseGitHookHandler) -> None:
         """

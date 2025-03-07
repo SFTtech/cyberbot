@@ -23,7 +23,9 @@ class HTTPServer(Service):
         self._bind_address = ""
         self._bind_port = 0
         self._base_url = ""
-        self._paths: dict[str, RequestHandler] = {}
+
+        # recursive tree of {str -> dict | RequestHandler}
+        self._routes: dict = dict()
 
     async def setup(self) -> None:
         config = self._bot.get_config("http_server")
@@ -54,46 +56,70 @@ class HTTPServer(Service):
 
         logger.info(f"serving on {self._base_url} {self._bind_address}:{self._bind_port}...")
 
-    async def register_path(self, path_prefix: str, handler: RequestHandler) -> bool:
+    async def register_path(self, path: str,
+                            handler: RequestHandler) -> None:
         """
         Returns if the path was registered successfully.
         """
 
-        path_prefix = path_prefix.lstrip("/").rstrip("/")
-        if "/" in path_prefix:
-            # we just support top-level routing for now.
-            raise ValueError("no middle / allowed in http server path registration for subpaths")
+        path = path.lstrip("/").rstrip("/")
+        parts = path.split("/")
+        lastpart = parts[-1]
 
-        logger.info(f"Registering http server path /{path_prefix}")
+        # insert new tree entry
+        node = self._routes
+        for idx, part in enumerate(parts[:-1]):
+            if part not in node:
+                newnode: dict = dict()
+                node[part] = newnode
+                node = newnode
+            elif isinstance(node, dict):
+                node = node[part]
+            else:
+                raise KeyError(f"path {path!r} would overwrite handler {'/'.join(parts[:idx])}")
 
-        if path_prefix in self._paths:
-            return False
+        if lastpart in node:
+            raise KeyError(f"path {path!r} already registered")
 
-        self._paths[path_prefix] = handler
-        return True
+        node[lastpart] = handler
 
-    async def deregister_path(self, path: str) -> bool:
+        logger.info(f"registered http server path /{path}")
+
+    async def deregister_path(self, path: str) -> None:
         """
         returns True if the path was deregistered, else False.
         """
-        if path not in self._paths:
-            return False
-        del self._paths[path]
-        return True
+
+        path = path.lstrip("/").rstrip("/")
+        parts = path.split("/")
+        lastpart = parts[-1]
+
+        node: dict = self._routes
+        for part in parts[:-1]:
+            node = node[part]
+
+        del node[lastpart]
 
     async def _handle_request(self, request: web.BaseRequest) -> web.StreamResponse:
-        path_parts = request.path.split("/", maxsplit=2)
-        prefix_path = path_parts[1]
+        path = request.path.lstrip("/").rstrip("/")
+        parts = path.split("/")
 
-        if handler := self._paths.get(prefix_path):
-            subpath = path_parts[2] if len(path_parts) >= 3 else ""
-            res: web.StreamResponse | None = await handler(subpath, request)
-            if res is None:
-                return web.Response(status=200)
-            return res
+        node: dict | RequestHandler = self._routes
+        for idx, part in enumerate(parts):
+            if isinstance(node, dict):
+                node = node[part]
+            else:
+                raise Exception("inconsistent")
 
-        else:
-            return web.Response(status=404, text=f"path {prefix_path!r} not found")
+            if callable(node):
+                subpath = "/".join(parts[idx+1:])
+                handler: RequestHandler = node
+                res: web.StreamResponse | None = await handler(subpath, request)
+                if res is None:
+                    return web.Response(status=200)
+                return res
 
-    async def get_url(self):
-        return self._base_url
+        return web.Response(status=404, text="not found")
+
+    async def format_url(self, subpath: str) -> str:
+        return f"{self._base_url}{subpath}"

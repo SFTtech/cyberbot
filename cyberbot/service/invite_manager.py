@@ -38,9 +38,7 @@ class InviteManager(Service):
         if not self._http_server:
             raise Exception("http server is not setup yet")
 
-        res = await self._http_server.register_path(self._path, self._handle_request)
-        if res is None:
-            raise Exception("Failed registering invite_manager path to http_server")
+        await self._http_server.register_path(self._path, self._handle_request)
 
     async def register_invitation(self, token, room_id, invitor):
         self._invitations[token] = (room_id, invitor)
