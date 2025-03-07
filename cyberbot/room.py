@@ -397,8 +397,8 @@ class Room:
             content=content,
         )
 
-    async def send_html(self, html_text: str, text: str = "", notice=False):
-        return await self.send_text(html=html_text, text=text, notice=notice)
+    async def send_html(self, html: str, text: str = "", notice=False):
+        return await self.send_text(html=html, text=text, notice=notice)
 
     async def send_image(self, handle: io.BytesIO, filename: str):
         iostart = handle.tell()

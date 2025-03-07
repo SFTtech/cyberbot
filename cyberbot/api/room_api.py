@@ -123,13 +123,13 @@ class RoomAPI:
 
     # room message sending
     async def send_text(self, txt, notice=False):
-        return await self._room.send_text(txt, notice)
+        return await self._room.send_text(txt, notice=notice)
 
     async def send_notice(self, txt):
         return await self._room.send_text(txt, notice=True)
 
-    async def send_html(self, html_text: str, text: str = "", notice=False):
-        return await self._room.send_html(html_text, text, notice)
+    async def send_html(self, html: str, text: str = "", notice=False):
+        return await self._room.send_html(text=text, html=html, notice=notice)
 
     # private chat
     async def send_text_to_user(
