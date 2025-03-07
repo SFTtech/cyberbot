@@ -126,4 +126,4 @@ class HTTPServer(Service):
         return Response(status=404, text="not found")
 
     async def format_url(self, subpath: str) -> str:
-        return f"{self._base_url}{subpath}"
+        return f"{self._base_url}/{subpath}"

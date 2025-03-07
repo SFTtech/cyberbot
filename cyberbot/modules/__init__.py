@@ -4,6 +4,7 @@ DEFAULT_MODULES = (
     "echo",
     "gitlab",
     "github",
+    "hookmsg",
     #"invite",
     #"voting",
 )
