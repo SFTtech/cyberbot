@@ -305,7 +305,7 @@ class Bot:
 
         return False
 
-    async def _handle_room_invite(self, room: nio.MatrixInvitedRoom):
+    async def _handle_room_invite(self, room: nio.MatrixInvitedRoom) -> None:
         inviter = room.inviter
 
         if not self._bot_invite_allowed(inviter, room):
@@ -313,22 +313,25 @@ class Bot:
             await self._client.room_leave(room.room_id)
             return
 
-        if room.room_id not in self._client.rooms:
-            logger.info(f"Joining room {room.room_id}...")
-            response = await self._client.join(room.room_id)
-            if isinstance(response, nio.responses.JoinResponse):
-                new_room = Room(self, room)
+        if nio_room := self._client.rooms.get(room.room_id):
 
-                init_ok = await new_room.setup(invited_by=inviter)
-                if init_ok:
-                    self.rooms.add(new_room)
+            if nio_room.users.get(self._own_user_id):
+                logger.warning(f"Not joining room {room.room_id!r}. We're already joined.")
+                return
 
-            else:
-                logger.warning(f"Couldn't joing the room: {response!r}")
+        logger.info(f"Joining room {room.room_id}...")
+        response = await self._client.join(room.room_id)
+        if isinstance(response, nio.responses.JoinResponse):
+            new_room = Room(self, room)
+
+            init_ok = await new_room.setup(invited_by=inviter)
+            if init_ok:
+                self.rooms.add(new_room)
+
         else:
-            logger.warning(f"Not joining room {room.room_id!r}. We're already joined.")
+            logger.warning(f"Couldn't joing the room: {response!r}")
 
-    async def _on_invite_event(self, room: nio.MatrixRoom, event: InviteMemberEvent):
+    async def _on_invite_event(self, room: nio.MatrixRoom, event: InviteMemberEvent) -> None:
         """
         triggered when the bot is invited to a room.
         can be a DM or a group chat.
