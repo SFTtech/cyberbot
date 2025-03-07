@@ -95,6 +95,7 @@ class Room:
                 invited_by=invited_by, config_room_for=config_room_for
             )
             if not ok:
+                self._log.warning("failed to setup new room")
                 return False
 
         elif room_mode == RoomMode.DISABLED:
@@ -205,7 +206,7 @@ class Room:
         # we didn't see this room before.
         room_mode = RoomMode.DISABLED
 
-        inviter_candidates = self.members.keys() - {self._bot.user_id}
+        inviter_candidates = (await self.get_members()).keys() - {self._bot.user_id}
         if config_room_for is not None or len(inviter_candidates) == 1:
             # we end up here due to the private room creation below.
             # or because it's a lonely bot-user direct room.
@@ -223,6 +224,7 @@ class Room:
 
         else:
             # it's a new room with other people
+            self._log.debug("registering as new interaction room")
             room_mode |= RoomMode.INTERACTION
 
             if invited_by is None:
@@ -232,6 +234,8 @@ class Room:
                 return room_mode, False
 
             if invited_by:
+                self._log.debug("granting config access to inviter %s", invited_by)
+
                 # the bot can be configured by the inviter only (and bot admins)
                 with self._acl as acl:
                     acl.user_role_add(invited_by, Role.config)
@@ -248,6 +252,11 @@ class Room:
                     "insert or replace into config_room(source_roomid, target_roomid) values (?, ?);",
                     (config_room.room_id, self.room_id),
                 )
+
+                # TODO: use RoomAPI to send&format once available
+                await config_room.send_text(html=(f'I just joined room "{self.display_name}" '
+                                                  f'(<code>{self.room_id}</code>) '
+                                                  f'by invite from {invited_by}'), notice=True)
 
         # record discovered room mode
         self._bot.db.write(
@@ -344,9 +353,15 @@ class Room:
     def member_count(self):
         return self._nio_room.member_count
 
-    @property
-    def members(self) -> dict[str, nio.MatrixUser]:
-        return self._nio_room.users
+    async def get_members(self) -> dict[str, nio.MatrixUser]:
+        """
+        TODO: better rely on nio's room member tracking?
+        """
+        members = (await self._bot.mxclient.joined_members(self.room_id)).members
+        ret: dict[str, nio.MatrixUser] = dict()
+        for member in members:
+            ret[member.user_id] = member
+        return ret
 
     def get_member(self, user_id: str) -> nio.MatrixUser | None:
         return self._nio_room.users.get(user_id)

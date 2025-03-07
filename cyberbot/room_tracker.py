@@ -41,7 +41,7 @@ class RoomTracker:
                 self.add(room)
 
                 # set up initial room-user tracking
-                for user_id in room.members.keys():
+                for user_id in (await room.get_members()).keys():
                     await self.on_room_join(room_id, user_id)
             else:
                 logger.error("failed to initialize room %r in RoomTracker", nio_room)
