@@ -303,6 +303,15 @@ class PullRequestFormatter(GitHubEventFormatter):
                     prnr = self._format_workitem_nr(prb)
                     return self._fmt_repo_action(f"pushed to {prnr}")
 
+            case "ready_for_review":
+                prnr = self._format_workitem_nr(prb)
+                return self._fmt_repo_action(
+                    self._format_state(
+                        f"marked {prnr} ready for review",
+                        state="confirmed",
+                    )
+                )
+
             case _:
                 if self.verbose:
                     return fmt_action
