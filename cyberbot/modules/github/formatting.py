@@ -17,13 +17,12 @@ if typing.TYPE_CHECKING:
 
 
 class User(BaseModel):
-    name: str
-    username: str | None = None
+    login: str
     html_url: str | None = None
     avatar_url: str | None = None
 
     def to_base(self) -> BaseUser:
-        return BaseUser(name=self.name, login=self.username, url=self.html_url)
+        return BaseUser(name=None, login=self.login, url=self.html_url)
 
 
 class Repo(BaseModel):

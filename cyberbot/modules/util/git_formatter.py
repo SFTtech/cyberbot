@@ -9,8 +9,8 @@ from pydantic import BaseModel
 
 
 class User(BaseModel):
-    name: str
-    login: str | None
+    login: str
+    name: str | None
     url: str | None
 
 
@@ -102,7 +102,7 @@ class GitEventFormatter(ABC):
             return repo.name
 
     def _format_user(self, user: User) -> str:
-        name = user.login or user.name
+        name = user.name or user.login
         if user.url:
             return self._format_link(user.url, name)
         return name
