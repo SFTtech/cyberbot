@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from aiohttp import web
 
 from ...api.service import Service
-from ...service.http_server import HTTPServer
+from ...service.http_server import HTTPServer, Request, Response, ResponseStream
 from ...types import Err, Ok, Result
 
 if typing.TYPE_CHECKING:
@@ -44,7 +44,7 @@ class GitHookServer(Service):
         self._base_url: str = ""
 
     @abstractmethod
-    async def _check_request(self, request: web.BaseRequest, secret: str) -> Result[str, str]:
+    async def _check_request(self, request: Request, secret: str) -> Result[str, str]:
         """
         validate the webhook signature.
         parse requests is used to extract the webhook's "event" (push, ...).
@@ -98,7 +98,7 @@ class GitHookServer(Service):
     async def deregister_hook(self, webhook_subpath: str):
         del self._handles[webhook_subpath]
 
-    async def _handle_request(self, subpath: str, request: web.BaseRequest) -> web.StreamResponse:
+    async def _handle_request(self, subpath: str, request: Request) -> ResponseStream:
         match request.method:
             case "GET":
                 text = textwrap.dedent(f"""\
@@ -116,34 +116,34 @@ class GitHookServer(Service):
                     </body>
                 </html>
                 """)
-                return web.Response(text=text, content_type="text/html")
+                return Response(text=text, content_type="text/html")
 
             case "POST":
                 pass
             case _:
-                return web.Response(text="unsupported method", status=404)
+                return Response(text="unsupported method", status=404)
 
         handle = self._handles.get(subpath)
 
         if not handle:
-            return web.Response(text=f"git hook subpath handler {subpath!r} not found", status=404)
+            return Response(text=f"git hook subpath handler {subpath!r} not found", status=404)
 
         # check msg signature
         match await self._check_request(request, handle.secret):
             case Err(msg):
-                return web.Response(text=msg, status=400)
+                return Response(text=msg, status=400)
             case Ok(_event):
                 event = _event
 
         try:
             content = await request.json()
         except web.HTTPBadRequest as exc:
-            return web.Response(text=f"failed to decode content json: {exc.reason}", status=400)
+            return Response(text=f"failed to decode content json: {exc.reason}", status=400)
 
         try:
             async with asyncio.timeout(2):
                 await handle.handler.handle_git_hook(subpath=subpath, event=event, content=content)
         except TimeoutError:
-            return web.Response(text="timeout", status=501)
+            return Response(text="timeout", status=501)
 
-        return web.Response(status=200)
+        return Response(status=200)

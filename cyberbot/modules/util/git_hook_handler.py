@@ -26,6 +26,7 @@ class _WebHook(BaseModel):
     description: str
 
 
+# TODO: this is pretty duplicated with hookmsg.HookMsg -> unify!
 class GitHookHandler(BaseGitHookHandler):
     """
     A HookManager loads and stores secrettokens and registers them to the

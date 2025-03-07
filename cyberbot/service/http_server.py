@@ -12,8 +12,12 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+type Request = web.BaseRequest
+type ResponseStream = web.StreamResponse
+Response = web.Response
 
-type RequestHandler = Callable[[str, web.BaseRequest], Awaitable[web.StreamResponse | None]]
+# async def handle_request(path: str, request: Request) -> Response | None:
+type RequestHandler = Callable[[str, Request], Awaitable[ResponseStream | None]]
 
 
 class HTTPServer(Service):
@@ -41,8 +45,8 @@ class HTTPServer(Service):
 
         await self.register_path("/", self._index_page)
 
-    async def _index_page(self, subpath: str, req: web.BaseRequest) -> web.StreamResponse:
-        return web.Response(text=f"{self._bot.botname} is running here!")
+    async def _index_page(self, subpath: str, req: Request) -> ResponseStream:
+        return Response(text=f"{self._bot.botname} is running here!")
 
     async def start(self) -> None:
         # we have to use the low level server instead of web.Application
@@ -100,7 +104,7 @@ class HTTPServer(Service):
 
         del node[lastpart]
 
-    async def _handle_request(self, request: web.BaseRequest) -> web.StreamResponse:
+    async def _handle_request(self, request: Request) -> ResponseStream:
         path = request.path.lstrip("/").rstrip("/")
         parts = path.split("/")
 
@@ -114,12 +118,12 @@ class HTTPServer(Service):
             if callable(node):
                 subpath = "/".join(parts[idx+1:])
                 handler: RequestHandler = node
-                res: web.StreamResponse | None = await handler(subpath, request)
+                res: ResponseStream | None = await handler(subpath, request)
                 if res is None:
-                    return web.Response(status=200)
+                    return Response(status=200)
                 return res
 
-        return web.Response(status=404, text="not found")
+        return Response(status=404, text="not found")
 
     async def format_url(self, subpath: str) -> str:
         return f"{self._base_url}{subpath}"
