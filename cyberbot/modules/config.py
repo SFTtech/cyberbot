@@ -362,12 +362,16 @@ class Config(RoomPlugin):
             case "activate":
                 result = await target_room.activate_plugin(args.name)
                 await self._send_block(str(result))
-                self._update_cli(target_room)
+
+                if isinstance(result, Ok):
+                    self._update_cli(target_room)
 
             case "remove":
                 result = await target_room.remove_plugin(args.name)
                 await self._send_block(str(result))
-                self._update_cli(target_room)
+
+                if isinstance(result, Ok):
+                    self._update_cli(target_room)
 
             case "list":
                 active_plugins = target_room.get_plugins().keys()

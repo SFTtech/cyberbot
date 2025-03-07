@@ -77,7 +77,8 @@ class RoomAPI:
                 if relates_to["rel_type"] == "m.replace":
                     return
 
-        for handler in self._text_handlers:
+        # important to copy - handlers may update the texthandlers
+        for handler in self._text_handlers.copy():
             await handler.process(event)
 
     # helpers
