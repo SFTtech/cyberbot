@@ -319,7 +319,7 @@ class Bot:
                 logger.warning(f"Not joining room {room.room_id!r}. We're already joined.")
                 return
 
-        logger.info(f"Joining room {room.room_id}...")
+        logger.info(f"Joining room {room.room_id} inivited by {inviter}...")
         response = await self._client.join(room.room_id)
         if isinstance(response, nio.responses.JoinResponse):
             new_room = Room(self, room)
@@ -327,9 +327,11 @@ class Bot:
             init_ok = await new_room.setup(invited_by=inviter)
             if init_ok:
                 self.rooms.add(new_room)
+            else:
+                logger.warning(f"canceling new room join {room.room_id!r}")
 
         else:
-            logger.warning(f"Couldn't joing the room: {response!r}")
+            logger.warning(f"Couldn't join the room {room.room_id!r}: {response!r}")
 
     async def _on_invite_event(self, room: nio.MatrixRoom, event: InviteMemberEvent) -> None:
         """

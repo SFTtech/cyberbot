@@ -420,7 +420,7 @@ class Config(RoomPlugin):
             self._update_cli(target_room)
 
         else:
-            self._send_notice("room not known to the bot")
+            await self._send_notice("room not known to the bot")
 
     async def _get_selected_target_room(self) -> Room | None:
         """

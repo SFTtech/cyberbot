@@ -119,6 +119,7 @@ class Room:
 
             ok = await self._load_plugin("config")
             if not ok:
+                self._log.warning("failed to load config plugin")
                 return False
 
         # this room can be configured by a config room and has interaction plugins

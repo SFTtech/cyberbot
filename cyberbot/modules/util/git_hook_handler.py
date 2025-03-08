@@ -165,7 +165,7 @@ class GitHookHandler(BaseGitHookHandler):
     async def _cfg_hook_rm(self, config_api: RoomAPI, hook_id: str) -> None:
         hook = self._webhooks.pop(hook_id, None)
         if hook is None:
-            config_api.send_notice("hook with this id not known")
+            await config_api.send_notice("hook with this id not known")
             return
 
         try:
