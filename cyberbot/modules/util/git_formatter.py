@@ -182,10 +182,10 @@ class GitEventFormatter(ABC):
             return "no commits"
 
     def _format_repo_event(self, repo: Repo, event: str) -> str:
-        return f"{self._format_repo(repo)} {event}"
+        return f"{self._format_repo(repo)}: {event}"
 
     def _format_repo_action(self, repo: Repo, user: User, action: str) -> str:
-        return f"{self._format_repo(repo)} {self._format_user(user)} {action}"
+        return f"{self._format_repo(repo)}: {self._format_user(user)} {action}"
 
     def _format_state(self, text: str, state: str="success", prefix: bool = False) -> str:
         if self.emojis:
