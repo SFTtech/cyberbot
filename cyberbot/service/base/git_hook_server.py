@@ -64,8 +64,8 @@ class GitHookServer(Service):
 
         path = config["webhook_path"]
 
-        # ensure single surrounding /path/
-        self._path = f"/{path.lstrip('/').rstrip('/')}/"
+        # ensure no surrounding /path/
+        self._path = f"{path.lstrip('/').rstrip('/')}"
 
     async def format_url(self, subpath: str) -> str:
         """
@@ -75,7 +75,7 @@ class GitHookServer(Service):
         if self._http_server is None:
             raise Exception("http server not yet set up")
 
-        return await self._http_server.format_url(f"{self._path}{subpath}")
+        return await self._http_server.format_url(f"{self._path}/{subpath}")
 
     async def start(self):
         if not self._http_server:
