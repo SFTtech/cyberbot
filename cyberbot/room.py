@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 import imagesize
 import nio
 
-from .room_acl import Role, RoomACL
+from .room_acl import RoomACL
 from .room_module import RoomModule
 from .types import Err, Ok, Result
 from .util import run_tasks
@@ -57,8 +57,6 @@ class Room:
 
     def __str__(self):
         return f"Matrix Room {self.room_id}{' encrypted' if self._nio_room.encrypted else ''}"
-
-
 
     def get_room_mode(self) -> RoomMode | None:
         room_mode_row = self._bot.db.read(
@@ -109,7 +107,7 @@ class Room:
             # cleanup rooms we're no longer in
             obsolete_tgt_rooms: set[str] = set()
             for room_id in configured_rooms:
-                if not self._bot.in_room(room_id):
+                if not (await self._bot.in_room(room_id)):
                     obsolete_tgt_rooms.add(room_id)
 
             if obsolete_tgt_rooms:
@@ -130,7 +128,7 @@ class Room:
             # cleanup config rooms we're no longer in
             obsolete_src_rooms: set[str] = set()
             for room_id in config_rooms:
-                if not self._bot.in_room(room_id):
+                if not (await self._bot.in_room(room_id)):
                     obsolete_src_rooms.add(room_id)
 
             if obsolete_src_rooms:
@@ -148,58 +146,6 @@ class Room:
         for plugin in self._modules.values():
             await plugin.init()
 
-    async def config_target_rooms(self) -> set[str]:
-        """
-        which rooms does this room configure?
-        """
-        configured_rooms = self._bot.db.read(
-            "select target_roomid from config_room where source_roomid=?;",
-            (self.room_id,),
-        )
-        ret: set[str] = set()
-        while True:
-            rooms = configured_rooms.fetchmany()
-            if not rooms:
-                break
-            ret.update(room[0] for room in rooms)
-        return ret
-
-    async def config_source_rooms(self) -> set[str]:
-        """
-        which rooms can configure this room?
-        """
-        config_rooms = self._bot.db.read(
-            "select source_roomid from config_room where target_roomid=?;",
-            (self.room_id,),
-        )
-        ret: set[str] = set()
-        while True:
-            rooms = config_rooms.fetchmany()
-            if not rooms:
-                break
-            ret.update(room[0] for room in rooms)
-        return ret
-
-    async def is_config_room(self, config_room_for: str | None = None) -> bool:
-        """
-        is this room used to configure other rooms?
-        if config_room_for is given, is this room able to configure it?
-        """
-
-        if config_room_for:
-            has_configroom = self._bot.db.read(
-                "select 1 from config_room where target_roomid=? and source_roomid=?;",
-                (config_room_for, self.room_id),
-            )
-            return has_configroom.fetchone() is not None
-
-        else:
-            has_configroom = self._bot.db.read(
-                "select 1 from config_room where source_roomid=?;",
-                (self.room_id,),
-            )
-            return has_configroom.fetchone() is not None
-
     async def _setup_new(
         self, invited_by: str | None = None, config_room_for: str | None = None
     ) -> tuple[RoomMode, bool]:
@@ -209,19 +155,11 @@ class Room:
 
         inviter_candidates = (await self.get_members()).keys() - {self._bot.user_id}
         if config_room_for is not None or len(inviter_candidates) == 1:
-            # we end up here due to the private room creation below.
+            # we end up here when we create a new config source room,
             # or because it's a lonely bot-user direct room.
-            #
-            # let's treat this as a new configuration room.
 
             self._log.debug("registering as new config room")
             room_mode |= RoomMode.CONFIG
-
-            if config_room_for:
-                self._bot.db.write(
-                    "insert or replace into config_room(source_roomid, target_roomid) values (?, ?);",
-                    (self.room_id, config_room_for),
-                )
 
         else:
             # it's a new room with other people
@@ -230,30 +168,20 @@ class Room:
 
             if invited_by is None:
                 self._log.error(
-                    "no known inviter for initial room join - can't grant access to them"
+                    "no known inviter for initial room join - please reinvite"
                 )
                 return room_mode, False
 
-            if invited_by:
-                self._log.debug("granting config access to inviter %s", invited_by)
+            # create or fetch a `Room` for configuration
+            self._log.debug("fetch or create bot configuration rooms...")
 
-                # the bot can be configured by the inviter only (and bot admins)
-                with self._acl as acl:
-                    acl.user_role_add(invited_by, Role.config)
+            config_rooms = await self._bot.rooms.get_create_config_source_rooms(
+                for_room=self,
+                inviter=invited_by,
+                name=f"{self._bot.botname} config",
+            )
 
-                # create or fetch a `Room` for configuration
-                self._log.debug("fetch or create bot configuration room...")
-                config_room = await self._bot.rooms.get_private_room_with_user(
-                    invited_by,
-                    name=f"{self._bot.botname} config",
-                )
-
-                # remember config room for interaction room
-                self._bot.db.write(
-                    "insert or replace into config_room(source_roomid, target_roomid) values (?, ?);",
-                    (config_room.room_id, self.room_id),
-                )
-
+            for config_room in config_rooms:
                 # TODO: use RoomAPI to send&format once available
                 await config_room.send_text(html=(f'I just joined room "{self.display_name}" '
                                                   f'(<code>{self.room_id}</code>) '
@@ -355,19 +283,20 @@ class Room:
         return self._nio_room.member_count
 
     async def get_members(self) -> dict[str, nio.MatrixUser]:
-        """
-        TODO: better rely on nio's room member tracking?
-        """
-        members = (await self._bot.mxclient.joined_members(self.room_id)).members
-        ret: dict[str, nio.MatrixUser] = dict()
-        for member in members:
-            ret[member.user_id] = member
-        return ret
+        return self._nio_room.users
 
     def get_member(self, user_id: str) -> nio.MatrixUser | None:
         return self._nio_room.users.get(user_id)
 
     async def on_bot_leave(self, removed_by: str) -> None:
+        # clean up db state for room
+
+        if room_ids := await self.config_source_rooms():
+            for config_room in self._bot.rooms.rooms_from_ids(room_ids):
+                await config_room.send_text(html=(f'I just left room "{self.display_name}" '
+                                                  f'(<code>{self.room_id}</code>) '
+                                                  f'by removal from {removed_by}'), notice=True)
+
         await run_tasks([
             p.destroy()
             for p in self._modules.values()
@@ -517,3 +446,12 @@ class Room:
 
     async def is_dm_room(self, user_id: str) -> bool:
         return await self._bot.rooms.is_dm_room(user_id, self.room_id)
+
+    async def config_source_rooms(self) -> set[str]:
+        return await self._bot.rooms.config_source_rooms(self.room_id)
+
+    async def config_target_rooms(self) -> set[str]:
+        return await self._bot.rooms.config_target_rooms(self.room_id)
+
+    async def is_config_room(self, config_room_for: str | None = None) -> bool:
+        return await self._bot.rooms.is_config_room(self.room_id, config_room_for)

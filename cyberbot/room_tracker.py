@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import nio
 
-from .database import Database
 from .room import Room, RoomHistoryVisibility
+from .room_acl import Role
 
 if TYPE_CHECKING:
+    from typing import Any, Iterable
+
     from .bot import Bot
 
 
@@ -16,9 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 class RoomTracker:
-    def __init__(self, bot: Bot, db: Database):
+    def __init__(self, bot: Bot):
         self._bot = bot
-        self._db = db
         self._active_rooms: dict[str, Room] = dict()
 
         # map user_id -> [direct_message_room_id, ...]
@@ -66,7 +67,15 @@ class RoomTracker:
 
         room = self._active_rooms.pop(room_id, None)
         if room:
+            logger.info(f"leaving room {room.room_id}...")
             await room.on_bot_leave(removed_by)
+
+        self._bot.db.write("delete from room_data where roomid=?;", (room_id,))
+        self._bot.db.write(
+            "delete from config_room where source_roomid=? or target_roomid=?;",
+            (room_id, room_id),
+        )
+
         # room is deconstructed here.
 
     def get(self, room_id: str) -> Room | None:
@@ -216,11 +225,12 @@ class RoomTracker:
                 return room
 
         # if we have an exiting room with only user_id and bot.user_id
-        for room_id, room in self._active_rooms.items():
-            member = room.get_member(user_id)
-            if member is not None:
-                # TODO: maybe allow multi-user config rooms someday
+        if user_rooms := self._user_rooms.get(user_id):
+            for room_id in user_rooms:
                 if await self.is_dm_room(user_id, room_id):
+                    room = self.get(room_id)
+                    if not room:
+                        raise Exception("inconsistent room tracking")
                     return room
 
         # Create a new room
@@ -235,3 +245,82 @@ class RoomTracker:
         )
 
         return new_room
+
+    def rooms_from_ids(self, room_ids: Iterable[str]) -> Iterable[Room]:
+        for room_id in room_ids:
+            room = self.get(room_id)
+            if not room:
+                raise KeyError(f"unknown room id {room_id!r}")
+            yield room
+
+    async def get_create_config_source_rooms(self, for_room: Room, inviter: str, name: str) -> set[Room]:
+        if config_rooms := await self.config_source_rooms(for_room.room_id):
+            return set(self.rooms_from_ids(config_rooms))
+
+        logger.debug("%s: creating new config room", for_room)
+        new_config_room = await self.get_private_room_with_user(user_id=inviter, name=name)
+
+        # the bot can be configured by the inviter only (and bot admins)
+        logger.debug("%s: granting config access to inviter %s", for_room, inviter)
+        with for_room.acl as acl:
+            acl.user_role_add(inviter, Role.config)
+
+        # remember config room for interaction room
+        self._bot.db.write(
+            "insert or replace into config_room(source_roomid, target_roomid) values (?, ?);",
+            (new_config_room.room_id, for_room.room_id),
+        )
+
+        return {new_config_room}
+
+    async def config_source_rooms(self, room_id: str) -> set[str]:
+        """
+        which rooms can configure this the given room
+        """
+        config_rooms = self._bot.db.read(
+            "select source_roomid from config_room where target_roomid=?;",
+            (room_id,),
+        )
+        ret: set[str] = set()
+        while True:
+            rooms = config_rooms.fetchmany()
+            if not rooms:
+                break
+            ret.update(room[0] for room in rooms)
+        return ret
+
+    async def config_target_rooms(self, room_id: str) -> set[str]:
+        """
+        which rooms does the given room configure?
+        """
+        configured_rooms = self._bot.db.read(
+            "select target_roomid from config_room where source_roomid=?;",
+            (room_id,),
+        )
+        ret: set[str] = set()
+        while True:
+            rooms = configured_rooms.fetchmany()
+            if not rooms:
+                break
+            ret.update(room[0] for room in rooms)
+        return ret
+
+    async def is_config_room(self, room_id: str, config_room_for: str | None = None) -> bool:
+        """
+        is the given room used to configure other rooms?
+        if config_room_for is given, is this room able to configure it?
+        """
+
+        if config_room_for:
+            has_configroom = self._bot.db.read(
+                "select 1 from config_room where target_roomid=? and source_roomid=?;",
+                (config_room_for, room_id),
+            )
+            return has_configroom.fetchone() is not None
+
+        else:
+            has_configroom = self._bot.db.read(
+                "select 1 from config_room where source_roomid=?;",
+                (room_id,),
+            )
+            return has_configroom.fetchone() is not None

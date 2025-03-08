@@ -8,9 +8,7 @@ import traceback
 from typing import Any
 
 import nio
-from nio.events.account_data import AccountDataEvent, UnknownAccountDataEvent
-from nio.events.invite_events import InviteMemberEvent
-from nio.events.room_events import RoomMemberEvent, RoomMessageFormatted, RoomMessageNotice, RoomMessageText
+from nio import events
 
 from .api.room_plugin import RoomPlugin
 from .api.service import Service
@@ -50,7 +48,7 @@ class Bot:
                 raise ValueError(
                     f"invalid allowed room. it must start with '!' and contain ':' -> {room!r}"
                 )
-        self.rooms = RoomTracker(self, self._db)
+        self.rooms = RoomTracker(self)
 
         self._last_sync_time = 0.0
         self._available_plugins: dict[str, type[RoomPlugin]] = dict()
@@ -275,13 +273,14 @@ class Bot:
         else:
             logger.warning(f"failed to get current display name: {displayname_resp}")
 
-    def in_room(self, room_id: str) -> bool:
+    async def in_room(self, room_id: str) -> bool:
         """
         check if the bot currently is in the given room id.
         needed for cross-room available check during our Room initialization.
         """
         if self._client.rooms.get(room_id) is not None:
             return True
+
         return False
 
     def _bot_invite_allowed(self, inviter: str, room: nio.MatrixRoom) -> bool:
@@ -313,15 +312,15 @@ class Bot:
             await self._client.room_leave(room.room_id)
             return
 
-        if nio_room := self._client.rooms.get(room.room_id):
+        if (await self.in_room(room.room_id)):
+            logger.warning(f"Not joining room {room.room_id!r}. We're already joined.")
+            return
 
-            if nio_room.users.get(self._own_user_id):
-                logger.warning(f"Not joining room {room.room_id!r}. We're already joined.")
-                return
-
-        logger.info(f"Joining room {room.room_id} inivited by {inviter}...")
+        logger.info(f"Joining room {room.room_id} invited by {inviter}...")
         response = await self._client.join(room.room_id)
         if isinstance(response, nio.responses.JoinResponse):
+            await self._client.synced.wait()
+
             new_room = Room(self, room)
 
             init_ok = await new_room.setup(invited_by=inviter)
@@ -333,7 +332,7 @@ class Bot:
         else:
             logger.warning(f"Couldn't join the room {room.room_id!r}: {response!r}")
 
-    async def _on_invite_event(self, room: nio.MatrixRoom, event: InviteMemberEvent) -> None:
+    async def _on_invite_event(self, room: nio.MatrixRoom, event: events.InviteMemberEvent) -> None:
         """
         triggered when the bot is invited to a room.
         can be a DM or a group chat.
@@ -349,7 +348,7 @@ class Bot:
         await self._handle_room_invite(invited_room)
 
     async def _on_room_member_event(
-        self, nio_room: nio.MatrixRoom, event: RoomMemberEvent
+        self, nio_room: nio.MatrixRoom, event: events.RoomMemberEvent
     ) -> None:
 
         who = event.state_key
@@ -367,7 +366,7 @@ class Bot:
                 pass
 
     async def _on_text_event(
-        self, nio_room: nio.MatrixRoom, event: RoomMessageFormatted
+        self, nio_room: nio.MatrixRoom, event: events.RoomMessageFormatted
     ):
         # we ignore messages older than 5secs before last sync to solve
         # joining new room and interpreting old messages problem
@@ -403,8 +402,8 @@ class Bot:
         else:
             logger.info(f"Ignoring text event in non-active room {nio_room.room_id}")
 
-    async def _on_event(self, room, event):
-        async def event_task(room, event):
+    async def _on_event(self, room: nio.MatrixRoom, event: nio.Event) -> None:
+        async def event_task(room: nio.MatrixRoom, event: nio.Event) -> None:
             try:
                 # every task must be handled in 60s
                 await asyncio.wait_for(self._process_event(room, event), 60)
@@ -424,18 +423,19 @@ class Bot:
         task.add_done_callback(event_handled)
         self._event_tasks.add(task)
 
-    async def _process_event(self, room, event):
+    async def _process_event(self, room: nio.MatrixRoom, event: nio.Event) -> None:
+        logger.debug(f"event: {event!r} in room {room!r}")
         match event:
-            case InviteMemberEvent():
+            case events.InviteMemberEvent():
                 await self._on_invite_event(room, event)
 
-            case RoomMessageText() | RoomMessageNotice():
+            case events.RoomMessageText() | events.RoomMessageNotice():
                 await self._on_text_event(room, event)
 
-            case RoomMemberEvent():
+            case events.RoomMemberEvent():
                 await self._on_room_member_event(room, event)
 
-            case nio.MegolmEvent():
+            case events.MegolmEvent():
                 # "MegolmEvents are presented to library users only if the library fails
                 # to decrypt the event because of a missing session key."
                 #
@@ -454,9 +454,9 @@ class Bot:
 
                 await self._client.request_room_key(event)
 
-            case nio.ReactionEvent():
+            case events.ReactionEvent():
                 pass
-            case nio.RedactionEvent():
+            case events.RedactionEvent():
                 pass
 
             case _:
@@ -468,9 +468,9 @@ class Bot:
     async def _on_ephemeral_event(self, arg1, arg2):
         logger.debug(f"ephemeral event: {arg1!r} {arg2!r}")
 
-    async def _on_global_account_data(self, event: AccountDataEvent):
+    async def _on_global_account_data(self, event: events.AccountDataEvent):
         # when there's a dedicated m.direct account data event, we need to update our cache.
-        if isinstance(event, UnknownAccountDataEvent):
+        if isinstance(event, events.UnknownAccountDataEvent):
             if event.type == "m.direct":
                 self.rooms.update_m_direct(event.content)
 
@@ -483,7 +483,7 @@ class Bot:
     async def _listen(self):
         logger.debug("setting up matrix event callbacks...")
         # InviteMemberEvent is not a room-event ("Event"), since its not in a active Room yet.
-        self._client.add_event_callback(self._on_event, InviteMemberEvent)
+        self._client.add_event_callback(self._on_event, events.InviteMemberEvent)
 
         self._client.add_event_callback(self._on_event, nio.Event)
 
