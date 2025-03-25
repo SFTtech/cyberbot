@@ -31,6 +31,7 @@ class RoomTracker:
     async def init(self, joined_rooms: dict[str, nio.MatrixRoom]):
         """
         recreate all rooms given a list of room ids (e.g. because the matrix server says we're in them).
+        this sets up room tracking based on the initial sync.
         """
         for room_id, nio_room in joined_rooms.items():
             room = Room(
@@ -41,7 +42,7 @@ class RoomTracker:
             if await room.setup():
                 self.add(room)
 
-                # set up initial room-user tracking
+                # set up room-user tracking from initial sync state
                 for user_id in (await room.get_members()).keys():
                     await self.on_room_join(room_id, user_id)
             else:
@@ -53,15 +54,29 @@ class RoomTracker:
             logger.info("- %s: mode: %r, name: %s", room_id, room.get_room_mode(), room.display_name)
             await room.init()
 
-        # TODO self._cleanup() to remove db-content for unknown rooms.
+        try:
+            self._bot.db.write("create temporary table joined_rooms(roomid text unique) strict;")
+            self._bot.db.write_many("insert or replace into joined_rooms(roomid) values (?);",
+                                    ((k,) for k in joined_rooms.keys()))
+
+            left_rooms = self._bot.db.read(
+                "select source_roomid from config_room where source_roomid not in joined_rooms "
+                "union "
+                "select target_roomid from config_room where target_roomid not in joined_rooms",
+            )
+
+            for left_room in left_rooms:
+                await self._remove(left_room, removed_by=None)
+
+        finally:
+            self._bot.db.write("drop table if exists joined_rooms;")
 
     def add(self, room: Room):
         if room.room_id in self._active_rooms:
             return
-
         self._active_rooms[room.room_id] = room
 
-    async def _remove(self, room_id: str, removed_by: str) -> None:
+    async def _remove(self, room_id: str, removed_by: str | None) -> None:
         for user_rooms in self._user_rooms.values():
             user_rooms.discard(room_id)
 
@@ -69,6 +84,8 @@ class RoomTracker:
         if room:
             logger.info(f"leaving room {room.room_id}...")
             await room.on_bot_leave(removed_by)
+        else:
+            logger.info(f"leaving non-active room {room_id}...")
 
         self._bot.db.write("delete from room_data where roomid=?;", (room_id,))
         self._bot.db.write(

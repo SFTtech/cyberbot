@@ -41,6 +41,9 @@ class Database:
 
         c.executescript(
             """
+            -- store temporary tables in memory only
+            pragma temp_store = MEMORY;
+
             -- room_plugins: which plugins are activated in which room
             create table if not exists room_plugins (
                 roomid     text,

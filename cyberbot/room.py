@@ -288,14 +288,15 @@ class Room:
     def get_member(self, user_id: str) -> nio.MatrixUser | None:
         return self._nio_room.users.get(user_id)
 
-    async def on_bot_leave(self, removed_by: str) -> None:
+    async def on_bot_leave(self, removed_by: str | None) -> None:
         # clean up db state for room
 
         if room_ids := await self.config_source_rooms():
             for config_room in self._bot.rooms.rooms_from_ids(room_ids):
                 await config_room.send_text(html=(f'I just left room "{self.display_name}" '
-                                                  f'(<code>{self.room_id}</code>) '
-                                                  f'by removal from {removed_by}'), notice=True)
+                                                  f'(<code>{self.room_id}</code>)'
+                                                  + f'by removal from {removed_by}') if removed_by else '',
+                                            notice=True)
 
         await run_tasks([
             p.destroy()

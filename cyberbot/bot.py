@@ -29,7 +29,11 @@ class Bot:
         self._db = Database(config.storage.database_path)
         self._own_user_id = config.matrix.user
 
-        client_config = nio.AsyncClientConfig(store_sync_tokens=False)
+        client_config = nio.AsyncClientConfig(
+            store_sync_tokens=False,
+            online_messages_only=True,
+            fill_timeline_gaps=True,
+        )
         self._client = nio.AsyncClient(
             homeserver=config.matrix.homeserver,
             user=self._own_user_id,
@@ -50,7 +54,6 @@ class Bot:
                 )
         self.rooms = RoomTracker(self)
 
-        self._last_sync_time = 0.0
         self._available_plugins: dict[str, type[RoomPlugin]] = dict()
 
         self._event_tasks: set[asyncio.Task] = set()
@@ -96,23 +99,21 @@ class Bot:
             await service.setup()
             await service.start()
 
-    async def _initial_sync(self, test=False):
-        # fetch room list and everything else for the current matrix state
-        # this also skips all past messages before we start handling them them.
-        # otherwise we'd reprocess the whole past.
-        # see "Synching" in the matrix client-server spec.
+    async def _initial_sync(self):
+        """
+        fetch room list and everything else for the current matrix state.
+        this lets nio build up its internal state.
+        see "Synching" in the matrix client-server spec.
+        """
         sync_resp = await self._client.sync(since=None)
         self._last_sync_time = time.time()
 
         if isinstance(sync_resp, nio.SyncError):
-            if test:
-                return False
             raise RuntimeError(f"error for initial sync: {sync_resp}")
         elif isinstance(sync_resp, nio.SyncResponse):
             pass
         else:
             raise RuntimeError(f"unknown sync response: {sync_resp}")
-        return True
 
     async def _login(self):
         logger.info("logging into Matrix...")
@@ -137,23 +138,24 @@ class Bot:
                         f"stored logged in user ({user_id!r}) does not match config ({self._client.user!r}) "
                     )
 
-                device_id = login_props.get("login_device_id")
-                if device_id != self._client.device_id:
-                    logger.warning(
-                        f"cached device id ({device_id!r}) of the current login token "
-                        f"does not match bot configuration file ({self._client.device_id!r}). "
-                        "using the cached one to proceed - please re-login or update the config file."
+                device_id: str | None = login_props.get("login_device_id")
+                if device_id:
+                    if device_id != self._client.device_id:
+                        logger.warning(
+                            f"cached device id ({device_id!r}) of the current login token "
+                            f"does not match bot configuration file ({self._client.device_id!r}). "
+                            "using the cached one to proceed - please re-login or update the config file."
+                        )
+
+                    logger.debug("reusing stored access_token...")
+
+                    self._client.restore_login(
+                        user_id=user_id,
+                        device_id=device_id,
+                        access_token=token,
                     )
 
-                logger.debug("reusing stored access_token...")
-
-                self._client.restore_login(
-                    user_id=user_id,
-                    device_id=device_id,
-                    access_token=token,
-                )
-
-                access_token_checked = await self._whoami(test=True)
+                    access_token_checked = await self._whoami(test=True)
 
         if not access_token_checked:
             # do a new password login, obtain a new token
@@ -180,14 +182,6 @@ class Bot:
 
         if not access_token_checked:
             await self._whoami()
-
-        if self._client.should_upload_keys:
-            await self._client.keys_upload()
-
-        await self._initial_sync()
-
-        await self._check_devices()
-        await self._update_displayname()
 
     async def _check_devices(self):
         """
@@ -246,9 +240,12 @@ class Bot:
     async def _load_rooms(self):
         logger.info("Loading rooms...")
 
-        # the joined room response in nio populates self._client.rooms.
-        await self._client.joined_rooms()
+        # rooms are known from initial sync
         await self.rooms.init(self._client.rooms)
+
+        # process pending room invites
+        for invited_room in self._client.invited_rooms.values():
+            await self._handle_bot_room_invite(invited_room)
 
     async def _load_modules(self):
         logger.debug("loading room modules...")
@@ -278,8 +275,9 @@ class Bot:
         check if the bot currently is in the given room id.
         needed for cross-room available check during our Room initialization.
         """
-        if self._client.rooms.get(room_id) is not None:
-            return True
+        if nio_room := self._client.rooms.get(room_id):
+            if self.user_id in nio_room.users:
+                return True
 
         return False
 
@@ -304,8 +302,11 @@ class Bot:
 
         return False
 
-    async def _handle_room_invite(self, room: nio.MatrixInvitedRoom) -> None:
+    async def _handle_bot_room_invite(self, room: nio.MatrixInvitedRoom) -> None:
         inviter = room.inviter
+
+        if not inviter:
+            raise Exception("tried to handle room invite without knowing an inviter")
 
         if not self._bot_invite_allowed(inviter, room):
             logger.info(f"Rejecting invite to room {room.room_id} invited by {inviter}")
@@ -319,8 +320,6 @@ class Bot:
         logger.info(f"Joining room {room.room_id} invited by {inviter}...")
         response = await self._client.join(room.room_id)
         if isinstance(response, nio.responses.JoinResponse):
-            await self._client.synced.wait()
-
             new_room = Room(self, room)
 
             init_ok = await new_room.setup(invited_by=inviter)
@@ -338,18 +337,25 @@ class Bot:
         can be a DM or a group chat.
         """
 
-        # filter for invites for us only
-        if event.membership != "invite" or event.state_key != self._own_user_id:
+        # filter for us only
+        if event.state_key != self._own_user_id:
+            return
+
+        # filter for invites only
+        if event.membership != "invite":
             return
 
         # nio tracks the room invitations on its own
         # and constructs the MatrixInvitedRoom from that
         invited_room = self._client.invited_rooms[room.room_id]
-        await self._handle_room_invite(invited_room)
+        await self._handle_bot_room_invite(invited_room)
 
     async def _on_room_member_event(
         self, nio_room: nio.MatrixRoom, event: events.RoomMemberEvent
     ) -> None:
+        """
+        handle room membership changes after the initial sync.
+        """
 
         who = event.state_key
         sender = event.sender
@@ -368,11 +374,6 @@ class Bot:
     async def _on_text_event(
         self, nio_room: nio.MatrixRoom, event: events.RoomMessageFormatted
     ):
-        # we ignore messages older than 5secs before last sync to solve
-        # joining new room and interpreting old messages problem
-        if (self._last_sync_time - 5) * 1000 > event.server_timestamp:
-            logger.debug(f"Ignoring old event in room {nio_room.room_id}")
-            return
 
         if event.sender == self._client.user:
             # ignore own message in room
@@ -402,11 +403,12 @@ class Bot:
         else:
             logger.info(f"Ignoring text event in non-active room {nio_room.room_id}")
 
-    async def _on_event(self, room: nio.MatrixRoom, event: nio.Event) -> None:
-        async def event_task(room: nio.MatrixRoom, event: nio.Event) -> None:
+    async def _on_event(self, room: nio.MatrixRoom, event: nio.RoomEvent) -> None:
+
+        async def event_task(room: nio.MatrixRoom, event: nio.RoomEvent) -> None:
             try:
                 # every task must be handled in 60s
-                await asyncio.wait_for(self._process_event(room, event), 60)
+                await asyncio.wait_for(self._process_room_event(room, event), 60)
             except TimeoutError:
                 logger.debug(
                     "room %s event %s took longer than 60s", room.room_id, type(event)
@@ -423,12 +425,20 @@ class Bot:
         task.add_done_callback(event_handled)
         self._event_tasks.add(task)
 
-    async def _process_event(self, room: nio.MatrixRoom, event: nio.Event) -> None:
-        logger.debug(f"event: {event!r} in room {room!r}")
+    async def _process_room_event(self, room: nio.MatrixRoom, event: nio.RoomEvent) -> None:
+        # events that happen after the current room state was loaded
+        logger.debug(f"=> event: {event!r} in room {room!r}")
+
         match event:
             case events.InviteMemberEvent():
+                # bot was invited to new room
                 await self._on_invite_event(room, event)
 
+            case events.Event():  # messages, ...
+                await self._process_event(room, event)
+
+    async def _process_event(self, room: nio.MatrixRoom, event: nio.Event) -> None:
+        match event:
             case events.RoomMessageText() | events.RoomMessageNotice():
                 await self._on_text_event(room, event)
 
@@ -438,20 +448,7 @@ class Bot:
             case events.MegolmEvent():
                 # "MegolmEvents are presented to library users only if the library fails
                 # to decrypt the event because of a missing session key."
-                #
-                # TODO: validate if we need to implement this
-                #       or nio does it on its own in the current release.
                 logger.warn(f"Unable to decrypt event {event}, requesting room keys...")
-                logger.debug(
-                    f"OLM account is shared: {self._client.olm_account_shared!r}"
-                )
-                logger.debug(f"Event session ID: {event.session_id!r}")
-
-                # clear pending key request, send a new one
-                r = nio.crypto.OutgoingKeyRequest(event.session_id, None, None, None)
-                self._client.store.remove_outgoing_key_request(r)
-                self._client.olm.outgoing_key_requests.pop(event.session_id, None)
-
                 await self._client.request_room_key(event)
 
             case events.ReactionEvent():
@@ -477,40 +474,39 @@ class Bot:
     async def _on_kick_response(self, response):
         logger.info(f"kick response: {response!r}")
 
-    async def _on_response(self, response):
-        self._last_sync_time = time.time()
-
     async def _listen(self):
         logger.debug("setting up matrix event callbacks...")
-        # InviteMemberEvent is not a room-event ("Event"), since its not in a active Room yet.
-        self._client.add_event_callback(self._on_event, events.InviteMemberEvent)
+        self._client.add_event_callback(self._on_event, nio.RoomEvent)
 
-        self._client.add_event_callback(self._on_event, nio.Event)
-
-        # self._client.add_to_device_callback(
-        #     self._on_todevice, nio.events.to_device.ToDeviceEvent
-        # )
-        # self._client.add_ephemeral_callback(
-        #     self._on_ephemeral_event, nio.events.ephemeral.EphemeralEvent
-        # )
-        # self._client.add_response_callback(self._on_kick_response, nio.RoomKickResponse)
-
-        self._client.add_response_callback(self._on_response, nio.Response)
-        self._client.add_room_account_data_callback(
-            self._on_global_account_data, nio.Response
+        self._client.add_global_account_data_callback(
+            self._on_global_account_data, nio.AccountDataEvent
         )
 
         logger.info(f"{self.botname} ready for action!")
 
-        # process pending room invites
-        for invited_room in self._client.invited_rooms.values():
-            await self._handle_room_invite(invited_room)
-
-        # process all new events
+        # process all new events since our initial sync
+        # nio internally sets next_batch from each sync call.
         await self._client.sync_forever()
 
     async def run(self):
+        """
+        setup the bot, then sync with matrix forever.
+        """
+        if self._client.should_upload_keys:
+            await self._client.keys_upload()
+
+        await self._initial_sync()
+
+        # set up bot account
+        await self._check_devices()
+        await self._update_displayname()
+
+        # prepare available room plugin modules
         await self._load_modules()
         await self._start_services()
+
+        # prepare and clean up known rooms
         await self._load_rooms()
+
+        # now react to new events and sync.
         await self._listen()
